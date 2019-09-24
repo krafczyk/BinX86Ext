@@ -1,0 +1,8 @@
+# no jedi -> parso
+chardet==3.0.4
+#jedi==0.15.1
+#parso==0.5.1
+pdfminer.six==20181108
+pycryptodome==3.9.0
+six==1.12.0
+sortedcontainers==2.1.0
