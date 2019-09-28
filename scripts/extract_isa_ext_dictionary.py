@@ -134,7 +134,6 @@ class TextBoxStripper(HTMLConverter):
 
 parser = argparse.ArgumentParser("Extract a dictionary of instructions and extensions from intel documentation")
 parser.add_argument("-i", "--input", help="The pdf to use", type=str, required=True)
-parser.add_argument("--font-dir", help="Directory to place fonts into when extracting fonts")
 
 args = parser.parse_args()
 
