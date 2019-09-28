@@ -82,11 +82,17 @@ class TextBoxStripper(HTMLConverter):
             box_j = self.text_boxes[i+1]
             xp = box_i.x+box_i.width
             xt = box_j.x
-            if abs(xp-xt) < self.merge_xthresh:
-                self.text_boxes[i].text += self.text_boxes[i+1].text
-                self.text_boxes[i].width += self.text_boxes[i+1].width
-                del self.text_boxes[i+1]
-            i += 1
+            iterate = True
+            # We only consider situations where the next text box is to the right
+            # of the current text box.
+            if box_i.y == box_j.y and box_i.x < box_j.x:
+                if abs(xp-xt) < self.merge_xthresh:
+                    box_i.text += box_j.text
+                    box_i.width = box_j.x+box_j.width-box_i.x
+                    del self.text_boxes[i+1]
+                    iterate = False
+            if iterate:
+                i += 1
 
     def write(self, text):
         return
