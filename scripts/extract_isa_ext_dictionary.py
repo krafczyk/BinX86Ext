@@ -149,7 +149,9 @@ title_y = 714.0
 #pages = [122]
 #pages = [124]
 #pages = [131]
-pages = [197]
+#pages = [197]
+#pages = [254]
+pages = [480]
 with open(input_filepath, "rb") as fp:
     rsrcmgr = PDFResourceManager(caching=True)
 
@@ -163,18 +165,18 @@ with open(input_filepath, "rb") as fp:
                                   password="",
                                   caching=True,
                                   check_extractable=True):   
-        ##if page_num in pages:
+        #if page_num in pages:
         if True:
             # Clear text boxes:
             device.text_boxes = []
             interpreter.process_page(page)
             device.merge_textboxes()
             for text_box in device.text_boxes:
-                #            device.merge_textboxes()            i += 1print(text_box)
+                #print(text_box)
                 if text_box.x > (title_x-eps) and text_box.x < (title_x+eps) and\
                    text_box.y > (title_y-eps) and text_box.y < (title_y+eps):
-                    candidate_title_text = text_box.text.decode('windows-1252')
-                    if inst_title_re.search(candidate_title_text):
+                    candidate_title_text = text_box.text.decode('windows-1252', 'ignore')
+                    if inst_title_re.match(candidate_title_text):
                         print(candidate_title_text)
                     else:
                         #print("Candidate didn't match! ({})".format(candidate_title_text))
