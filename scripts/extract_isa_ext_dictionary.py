@@ -141,7 +141,7 @@ input_filepath = args.input
 
 outfp = sys.stdout.buffer
 
-inst_title_re = re.compile(r".*—.*")
+inst_title_re = re.compile(r"^[A-Z0-9/ \[\]]*—.*$")
 eps = 2
 title_x = 45.12
 title_y = 714.0
