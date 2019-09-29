@@ -26,14 +26,15 @@ from pdfminer.converter import HTMLConverter
 import pdfminer.utils as utils
 
 class TextBox(object):
-    def __init__(self, text, x, y, width):
+    def __init__(self, text, x, y, width, height):
         self.text = text
         self.x = x
         self.y = y
         self.width = width
+        self.height = height
 
     def __repr__(self):
-        return "({},{},{}) -> {}".format(self.x, self.y, self.width, self.text)
+        return "({},{},{},{}) -> {}".format(self.x, self.y, self.width, self.height, self.text)
 
 ##  TextConverter
 ##
@@ -56,12 +57,13 @@ class TextBoxStripper(HTMLConverter):
         self.init_y = 0
         self.space_thresh = 50
         self.merge_xthresh = 3
+        self.merge_ythresh = 0.1
         return
 
-    def push_textbox(self, x, y):
+    def push_textbox(self, x, y, h):
         if self.temp_text is not None:
             self.text_boxes.append(TextBox(self.temp_text, self.init_x,
-                                           self.init_y, x-self.init_x))
+                                           self.init_y, x-self.init_x, h))
             self.temp_text = None
 
     def push_text(self, text, x, y):
@@ -86,7 +88,8 @@ class TextBoxStripper(HTMLConverter):
             # We only consider situations where the next text box is to the right
             # of the current text box.
             if box_i.y == box_j.y and box_i.x < box_j.x:
-                if abs(xp-xt) < self.merge_xthresh:
+                if abs(xp-xt) < self.merge_xthresh and\
+                   abs(box_i.height-box_j.height) < self.merge_ythresh:
                     box_i.text += box_j.text
                     box_i.width = box_j.x+box_j.width-box_i.x
                     del self.text_boxes[i+1]
@@ -113,7 +116,8 @@ class TextBoxStripper(HTMLConverter):
             if utils.isnumber(obj):
                 if abs(obj) > self.space_thresh:
                     (xt, yt) = utils.apply_matrix_pt(matrix, (x, y))
-                    self.push_textbox(xt, yt)
+                    h_est = fontsize*matrix[3] # We estimate the size of the font by multiplying the fontsize by the height scaling in the textmatrix.
+                    self.push_textbox(xt, yt, h_est)
                 x -= obj*dxscale
                 needcharspace = True
             else:
@@ -129,7 +133,8 @@ class TextBoxStripper(HTMLConverter):
                         x += wordspace
                     needcharspace = True
         (xt, yt) = utils.apply_matrix_pt(matrix, (x, y))
-        self.push_textbox(xt, yt)
+        h_est = fontsize*matrix[3] # We estimate the size of the font by multiplying the fontsize by the height scaling in the textmatrix.
+        self.push_textbox(xt, yt, h_est)
         return (x, y)
 
 parser = argparse.ArgumentParser("Extract a dictionary of instructions and extensions from intel documentation")
