@@ -74,6 +74,15 @@ class TextBoxStripper(HTMLConverter):
         else:
             self.temp_text += text
 
+    def drop_empty_textboxes(self):
+        i = 0
+        while i < len(self.text_boxes) - 1:
+            dec_text = self.text_boxes[i].text.decode('windows-1252').strip()
+            if dec_text == '':
+                del self.text_boxes[i]
+            else:
+                i += 1
+
     def merge_textboxes(self):
         # For now, we only implement consecutive merging. Usually text boxes
         # Which need to be merged occur right after each other in the content
