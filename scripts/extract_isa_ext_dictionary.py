@@ -26,15 +26,16 @@ from pdfminer.converter import HTMLConverter
 import pdfminer.utils as utils
 
 class TextBox(object):
-    def __init__(self, text, x, y, width, height):
+    def __init__(self, text, x, y, width, height, font):
         self.text = text
         self.x = x
         self.y = y
         self.width = width
         self.height = height
+        self.font = font.basefont
 
     def __repr__(self):
-        return "({},{},{},{}) -> {}".format(self.x, self.y, self.width, self.height, self.text)
+        return "(x={} y={} w={} h={} font={}) -> {}".format(self.x, self.y, self.width, self.height, self.font, self.text)
 
 ##  TextConverter
 ##
@@ -60,10 +61,10 @@ class TextBoxStripper(HTMLConverter):
         self.merge_ythresh = 0.1
         return
 
-    def push_textbox(self, x, y, h):
+    def push_textbox(self, x, y, h, font):
         if self.temp_text is not None:
             self.text_boxes.append(TextBox(self.temp_text, self.init_x,
-                                           self.init_y, x-self.init_x, h))
+                                           self.init_y, x-self.init_x, h, font))
             self.temp_text = None
 
     def push_text(self, text, x, y):
@@ -126,7 +127,7 @@ class TextBoxStripper(HTMLConverter):
                 if abs(obj) > self.space_thresh:
                     (xt, yt) = utils.apply_matrix_pt(matrix, (x, y))
                     h_est = fontsize*matrix[3] # We estimate the size of the font by multiplying the fontsize by the height scaling in the textmatrix.
-                    self.push_textbox(xt, yt, h_est)
+                    self.push_textbox(xt, yt, h_est, font)
                 x -= obj*dxscale
                 needcharspace = True
             else:
