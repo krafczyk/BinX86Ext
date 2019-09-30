@@ -156,7 +156,7 @@ input_filepath = args.input
 outfp = sys.stdout.buffer
 
 inst_title_re = re.compile(r"^[A-Z0-9/ \[\]]*—.*$")
-eps = 2
+eps = 5
 title_x = 45.12
 title_y = 714.0
 
@@ -184,6 +184,7 @@ with open(input_filepath, "rb") as fp:
             # Clear text boxes:
             device.text_boxes = []
             interpreter.process_page(page)
+            device.drop_empty_textboxes()
             device.merge_textboxes()
             for text_box in device.text_boxes:
                 #print(text_box)
