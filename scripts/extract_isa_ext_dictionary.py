@@ -97,7 +97,8 @@ class TextBoxStripper(HTMLConverter):
             iterate = True
             # We only consider situations where the next text box is to the right
             # of the current text box.
-            if box_i.y == box_j.y and box_i.x < box_j.x:
+            if box_i.font == box_j.font and\
+               box_i.y == box_j.y and box_i.x < box_j.x:
                 if abs(xp-xt) < self.merge_xthresh and\
                    abs(box_i.height-box_j.height) < self.merge_ythresh:
                     box_i.text += box_j.text
