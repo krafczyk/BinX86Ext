@@ -77,7 +77,7 @@ class TextBoxStripper(HTMLConverter):
     def drop_empty_textboxes(self):
         i = 0
         while i < len(self.text_boxes) - 1:
-            dec_text = self.text_boxes[i].text.decode('windows-1252').strip()
+            dec_text = self.text_boxes[i].text.decode('windows-1252', 'ignore').strip()
             if dec_text == '':
                 del self.text_boxes[i]
             else:
