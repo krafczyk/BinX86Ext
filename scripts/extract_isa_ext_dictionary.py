@@ -39,6 +39,28 @@ class TextBox(object):
     def __repr__(self):
         return "(x={} y={} w={} h={} font={}) -> {}".format(self.x, self.y, self.width, self.height, self.font, self.text)
 
+    def __lt__(self, other):
+        if self.y < other.y:
+            return False
+        elif self.y == other.y:
+            if self.x < other.x:
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def __gt__(self, other):
+        if self.y > other.y:
+            return False
+        elif self.y == other.y:
+            if self.x > other.x:
+                return True
+            else:
+                return False
+        else:
+            return True
+
 def dist_to_line_segment(line_segment, pt):
     p1 = line_segment[0]
     p2 = line_segment[1]
@@ -134,6 +156,27 @@ class Rectangle(object):
         else:
             return True
 
+class Cell(object):
+    def __init__(self, boundaries, all_text_boxes):
+        self.text_boxes = []
+        self.boundaries = boundaries
+
+        for box in all_text_boxes:
+            (x,y) = (box.x, box.y)
+            if x > boundaries[0][0] and x < boundaries[0][1] and\
+               y > boundaries[1][0] and y < boundaries[1][1]:
+                self.text_boxes.append(box)
+
+        self.text_boxes = sorted(self.text_boxes)
+
+    def __repr__(self):
+        rep = "Cell: {}<x<{} {}<y<{} text: ".format(self.boundaries[0][0], self.boundaries[0][1],
+                                            self.boundaries[1][0], self.boundaries[1][1])
+        for box in self.text_boxes:
+            rep = " ".join([rep, str(box)])
+
+        return rep
+
 
 class Table(object):
     def __init__(self, line_list, text_boxes):
@@ -153,8 +196,22 @@ class Table(object):
 
         self.dim = (len(self.vert_boundaries)-1, len(self.horiz_boundaries)-1)
 
+        self.cells = []
+
+        for i in range(self.dim[0]):
+            self.cells.append([])
+            for j in range(self.dim[1]):
+                x_bounds = (self.vert_boundaries[i], self.vert_boundaries[i+1])
+                y_bounds = (self.horiz_boundaries[self.dim[1]-j-1], self.horiz_boundaries[self.dim[1]-j])
+                self.cells[i].append(Cell([x_bounds, y_bounds], text_boxes))
+
     def __repr__(self):
-        return "Table dim={}".format(self.dim)
+        return "Table dim={} vert={} horiz={}".format(self.dim, self.vert_boundaries, self.horiz_boundaries)
+
+    def show_table(self):
+        for i in range(self.dim[0]):
+            for j in range(self.dim[1]):
+                print("i={} j={} {}".format(i, j, self.cells[i][j]))
 
 ##  TextConverter
 ##
@@ -232,9 +289,7 @@ class TextBoxStripper(HTMLConverter):
                 i += 1
 
     def build_tables(self):
-        print("building tables")
         # Drop rectangles that aren't 'lines'
-        print("Rect drops")
         i = 0
         while i < len(self.rectangles):
             rect = self.rectangles[i]
@@ -242,12 +297,10 @@ class TextBoxStripper(HTMLConverter):
                rect.w < self.thickness_thresh:
                 i += 1
             else:
-                print("dropping rect {}".format(self.rectangles[i]))
                 del self.rectangles[i]
 
         # Create new line groups 
         # While we still have rectangles available
-        print("Grouping lines")
         while len(self.rectangles) > 0:
             # Start new group with first rectangle
             new_grp = [self.rectangles[0]]
@@ -258,18 +311,9 @@ class TextBoxStripper(HTMLConverter):
             while i < len(self.rectangles):
                 join = False
                 # Check for intersection with any of the new group of rectangles
-                mindist = np.inf
-                print("current group")
-                for rect in new_grp:
-                    print(rect)
-                print("Computing group distance to: {}".format(self.rectangles[i]))
                 for rect in new_grp:
                     dist = rect.dist(self.rectangles[i])
-                    print("dist: {} -> {}".format(rect, dist))
-                    if dist < mindist:
-                        mindist = dist
                     if dist <= self.dist_thresh:
-                        print("We'll join this rect.")
                         join = True
                         break
                 if join:
@@ -280,7 +324,6 @@ class TextBoxStripper(HTMLConverter):
                     i = 0
                 else:
                     # Advance to the next available rectangle
-                    print("closest dist: {}".format(mindist))
                     i += 1
             # Append the new group of the group list
             self.tables.append(Table(new_grp, self.text_boxes))
@@ -424,6 +467,7 @@ with open(input_filepath, "rb") as fp:
             print("Tables")
             for table in device.tables:
                 print(table)
+                table.show_table()
         page_num += 1
 
 
