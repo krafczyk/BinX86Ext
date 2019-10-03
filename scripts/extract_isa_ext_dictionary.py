@@ -194,15 +194,15 @@ class Table(object):
         self.vert_boundaries = sorted(self.vert_boundaries)
         self.horiz_boundaries = sorted(self.horiz_boundaries)
 
-        self.dim = (len(self.vert_boundaries)-1, len(self.horiz_boundaries)-1)
+        self.dim = (len(self.horiz_boundaries)-1, len(self.vert_boundaries)-1)
 
         self.cells = []
 
         for i in range(self.dim[0]):
             self.cells.append([])
             for j in range(self.dim[1]):
-                x_bounds = (self.vert_boundaries[i], self.vert_boundaries[i+1])
-                y_bounds = (self.horiz_boundaries[self.dim[1]-j-1], self.horiz_boundaries[self.dim[1]-j])
+                y_bounds = (self.horiz_boundaries[self.dim[0]-i-1], self.horiz_boundaries[self.dim[0]-i])
+                x_bounds = (self.vert_boundaries[j], self.vert_boundaries[j+1])
                 self.cells[i].append(Cell([x_bounds, y_bounds], text_boxes))
 
     def __repr__(self):
@@ -230,9 +230,9 @@ class TextBoxStripper(HTMLConverter):
                                text_colors=text_colors)
         self.text_boxes = []
         self.temp_text = None
-        self.init_x = 0
-        self.init_y = 0
-        self.space_thresh = 50
+        self.init_p = (0,0)
+        self.prev_p = (0,0)
+        self.space_thresh = .1
         self.merge_xthresh = 3
         self.merge_ythresh = 0.1
         self.rectangles = []
@@ -241,19 +241,33 @@ class TextBoxStripper(HTMLConverter):
         self.dist_thresh = 10
         return
 
-    def push_textbox(self, x, y, h, font):
+    def push_textbox(self, p, h, font, matrix):
         if self.temp_text is not None:
-            self.text_boxes.append(TextBox(self.temp_text, self.init_x,
-                                           self.init_y, x-self.init_x, h, font))
+            (xt, yt) = utils.apply_matrix_pt(matrix, self.init_p)
+            self.text_boxes.append(TextBox(self.temp_text, xt,
+                                           yt, (p[0]-self.init_p[0])*matrix[0], h, font))
             self.temp_text = None
 
-    def push_text(self, text, x, y):
-        if self.temp_text is None:
-            self.temp_text = text
-            self.init_x = x
-            self.init_y = y
+    def push_char(self, char, char_width, p, h, font, matrix):
+        if char is None:
+            # Handle end of rendering
+            self.push_textbox(self.prev_p, h, font, matrix)
         else:
-            self.temp_text += text
+            if self.temp_text == None:
+                # There is no text written for this render yet.
+                self.temp_text = char
+                self.init_p = p
+                self.prev_p = (p[0]+char_width,p[1])
+            else:
+                # We need to test how far from the last character we are
+                if p[0]-self.prev_p[0] > self.space_thresh:
+                    # We are far enough away to warrant a new textbox
+                    self.push_textbox(self.prev_p, h, font, matrix)
+                    self.push_char(char, char_width, p, h, font, matrix)
+                else:
+                    # We want to add this char to the running text
+                    self.temp_text += char
+                    self.prev_p = (p[0]+char_width, p[1])
 
     def drop_empty_textboxes(self):
         i = 0
@@ -343,29 +357,25 @@ class TextBoxStripper(HTMLConverter):
                                  rise, dxscale, ncs, graphicstate):
         (x, y) = pos
         needcharspace = False
+        h_est = fontsize*matrix[3] # We estimate the size of the font by multiplying the fontsize by the height scaling in the textmatrix.
         for obj in seq:
             if utils.isnumber(obj):
-                if abs(obj) > self.space_thresh:
-                    (xt, yt) = utils.apply_matrix_pt(matrix, (x, y))
-                    h_est = fontsize*matrix[3] # We estimate the size of the font by multiplying the fontsize by the height scaling in the textmatrix.
-                    self.push_textbox(xt, yt, h_est, font)
                 x -= obj*dxscale
                 needcharspace = True
             else:
-                (xt, yt) = utils.apply_matrix_pt(matrix, (x, y))
-                self.push_text(obj, xt, yt)
-                for cid in font.decode(obj):
+                for (char, cid) in zip(obj,font.decode(obj)):
                     if needcharspace:
                         x += charspace
-                    x += self.render_char(utils.translate_matrix(matrix, (x, y)),
-                                          font, fontsize, scaling, rise, cid,
-                                          ncs, graphicstate)
+                    char_width = self.render_char(utils.translate_matrix(matrix, (x, y)),
+                                                  font, fontsize, scaling, rise, cid,
+                                                  ncs, graphicstate)
+                    self.push_char(bytes([char]), char_width, (x, y), h_est, font, matrix)
+                    x += char_width
                     if cid == 32 and wordspace:
                         x += wordspace
                     needcharspace = True
-        (xt, yt) = utils.apply_matrix_pt(matrix, (x, y))
-        h_est = fontsize*matrix[3] # We estimate the size of the font by multiplying the fontsize by the height scaling in the textmatrix.
-        self.push_textbox(xt, yt, h_est, font)
+        # Push none to indicate end of rendering.
+        self.push_char(None, 0, (x,y), h_est, font, matrix)
         return (x, y)
 
     def paint_path(self, gstate, stroke, fill, evenodd, path):
@@ -437,38 +447,31 @@ with open(input_filepath, "rb") as fp:
     device = TextBoxStripper(rsrcmgr, outfp)
 
     interpreter = PDFPageInterpreter(rsrcmgr, device)
-    page_num = 1
-    for page in PDFPage.get_pages(fp,
-                                  None, # There's a mismatch between page 'numbers' and whats passed here.
-                                  maxpages=0,
-                                  password="",
-                                  caching=True,
-                                  check_extractable=True):   
-        if page_num in pages:
-        #if True:
-            print("Page {}".format(page_num))
-            print("data stream:")
-            for stream in page.contents:
-                print(stream.get_data().decode('windows-1252'))
-            # Text box processing:
-            device.text_boxes = []
-            interpreter.process_page(page)
-            device.drop_empty_textboxes()
-            device.merge_textboxes()
-            # Table processing
-            device.build_tables()
-            for text_box in device.text_boxes:
-                print(text_box)
-                if text_box.x > (title_x-eps) and text_box.x < (title_x+eps) and\
-                   text_box.y > (title_y-eps) and text_box.y < (title_y+eps):
-                    candidate_title_text = text_box.text.decode('windows-1252', 'ignore')
-                    if inst_title_re.match(candidate_title_text):
-                        print(candidate_title_text)
-            print("Tables")
-            for table in device.tables:
-                print(table)
-                table.show_table()
-        page_num += 1
-
+    for (page_num, page) in PDFPage.get_pages2(fp,
+                                               pages,
+                                               password="",
+                                               caching=True,
+                                               check_extractable=True,
+                                               fallback=False):
+        print("===== Page {}".format(page_num))
+        # Text box processing:
+        device.text_boxes = []
+        device.tables = []
+        interpreter.process_page(page)
+        device.drop_empty_textboxes()
+        device.merge_textboxes()
+        # Table processing
+        device.build_tables()
+        for text_box in device.text_boxes:
+            #print(text_box)
+            if text_box.x > (title_x-eps) and text_box.x < (title_x+eps) and\
+                text_box.y > (title_y-eps) and text_box.y < (title_y+eps):
+                candidate_title_text = text_box.text.decode('windows-1252', 'ignore')
+                if inst_title_re.match(candidate_title_text):
+                    print(candidate_title_text)
+        print("---- Tables")
+        for table in device.tables:
+            print(table)
+            table.show_table()
 
     device.close()
