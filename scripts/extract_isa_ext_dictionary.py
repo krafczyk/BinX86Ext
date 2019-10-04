@@ -61,6 +61,12 @@ class TextBox(object):
         else:
             return True
 
+def join_boxes_and_text(text_box_list):
+    text = []
+    for text_box in text_box_list:
+        text.append(text_box.text.decode('windows-1252', 'ignore'))
+    return "".join(text)
+
 def dist_to_line_segment(line_segment, pt):
     p1 = line_segment[0]
     p2 = line_segment[1]
@@ -178,7 +184,7 @@ class Cell(object):
         return rep
 
 
-class Table(object):
+class RawTable(object):
     def __init__(self, line_list, text_boxes):
         self.vert_boundaries = []
         self.horiz_boundaries = []
@@ -206,12 +212,159 @@ class Table(object):
                 self.cells[i].append(Cell([x_bounds, y_bounds], text_boxes))
 
     def __repr__(self):
-        return "Table dim={} vert={} horiz={}".format(self.dim, self.vert_boundaries, self.horiz_boundaries)
+        return "RawTable dim={} vert={} horiz={}".format(self.dim, self.vert_boundaries, self.horiz_boundaries)
 
     def show_table(self):
         for i in range(self.dim[0]):
             for j in range(self.dim[1]):
                 print("i={} j={} {}".format(i, j, self.cells[i][j]))
+
+class Instruction(object):
+    support_64 = ["V", "I", "N.E.", "N.P", "N.I.", "N.S." ]
+    support_32 = ["V", "I", "N.E."]
+    non_instructions = []
+
+    def __init__(self, opcode, instruction, description,
+                       bit_validity={32:"V", 64:"V"},
+                       cpuid=None):
+        self.opcode = opcode
+        self.instruction = instruction
+        self.inst = self.instruction.split(" ")[0]
+        self.bit_validity = {}
+        self.bit_validity[32] = Instruction.parse_validity_32(bit_validity[32])
+        self.bit_validity[64] = Instruction.parse_validity_64(bit_validity[64])
+        self.cpuid_flags = Instruction.parse_cpuid(cpuid)
+
+    def __repr__(self):
+        return "Instruction={} {}".format(self.inst, self.opcode)
+
+    @staticmethod
+    def parse_cpuid(cpuid):
+        flags = []
+        if cpuid is None:
+            return flags
+        for flag in cpuid:
+            if flag in Instruction.non_instructions:
+                continue
+            else:
+                flags.append(flag)
+
+    @staticmethod
+    def parse_validity_64(validity):
+        if validity in Instruction.support_64:
+            return validity
+        if validity == "Valid":
+            return "V"
+        if validity == "Invalid":
+            return "I"
+        raise RuntimeError("64-bit validity {} unknown.".format(validity))
+
+    @staticmethod
+    def parse_validity_32(validity):
+        if validity in Instruction.support_32:
+            return validity
+        if validity == "Valid":
+            return "V"
+        if validity == "Invalid":
+            return "I"
+        if validity == "NE":
+            return "N.E."
+        raise RuntimeError("32-bit validity {} unknown.".format(validity))
+
+    @classmethod
+    def FromTable(cls, rawtable):
+        # Determine what kind of Table the raw table is.
+
+        cols = []
+
+        for j in range(rawtable.dim[1]):
+            text = None
+            for box in rawtable.cells[0][j].text_boxes:
+                if text is None:
+                    text = box.text
+                else:
+                    text += box.text
+            text = text.decode('windows-1252', 'ignore')
+            # Remove spaces around '/' characters
+
+            text = text.replace(' / ', '/')
+            text = text.replace(' /', '/')
+            text = text.replace('/ ', '/')
+            text = text.strip()
+
+            cols.append(text)
+
+        print("Found columns:")
+        for col in cols:
+            print(col)
+
+        the_type = None
+        if cols[0] == "Opcode/Instruction" and cols[3] == "CPUID Feature Flag":
+            the_type = "A"
+        elif cols[0] == "Opcode" and cols[1] == "Instruction":
+            the_type = "B"
+        elif cols[0] == "Op/En" and cols[2] == "Operand 1":
+            return []
+        elif cols[0] == "Op/En" and cols[1] == "Operand 1":
+            return []
+        elif cols[0] == "Superscript Symbol":
+            return []
+        elif cols[1] == "0" and cols[2] == "1":
+            return []
+        elif cols[1] == "8" and cols[2] == "9":
+            return []
+        elif cols[1] == "pfx" and cols[2] == "0":
+            return []
+        elif cols[1] == "pfx" and cols[2] == "8":
+            return []
+        elif cols[0] == "mod" and cols[1] == "nnn":
+            return []
+        else:
+            raise RuntimeError("Unrecognized Table")
+
+        result = []
+        for i in range(1,rawtable.dim[0]):
+            if the_type == "A":
+                opcode_cell = rawtable.cells[i][0]
+                num_opcode_cell_text_boxes = len(opcode_cell.text_boxes)
+                if num_opcode_cell_text_boxes == 1:
+                    raise RuntimeError("There should be more lines of text for this box")
+                elif num_opcode_cell_text_boxes == 2:
+                    opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
+                    instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:2])
+                elif num_opcode_cell_text_boxes == 3:
+                    opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
+                    instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:3])
+                elif num_opcode_cell_text_boxes == 4:
+                    opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:2])
+                    instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[2:4])
+                else:
+                    print("Textboxes:")
+                    for box in rawtable.cells[i][0].text_boxes:
+                        print(box)
+                    raise RuntimeError("Too many lines of text for an opcode cell!")
+
+                bit_validity_text = join_boxes_and_text(rawtable.cells[i][2].text_boxes)
+                bvt = bit_validity_text.split('/')
+                if len(bvt) != 2:
+                    raise RuntimeError("Bit validity ({}) should contain one '/' character.".format(bit_validity_text))
+                bit_validity = {64: bvt[0], 32: bvt[1]}
+                cpuflags = join_boxes_and_text(rawtable.cells[i][3].text_boxes).split(" ")
+                description = join_boxes_and_text(rawtable.cells[i][4].text_boxes)
+
+                result.append(cls(opcode, instruction, description, bit_validity, cpuflags))
+
+            elif the_type == "B":
+                opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes)
+                instruction = join_boxes_and_text(rawtable.cells[i][1].text_boxes)
+                bit_validity = {}
+                bit_validity[64] = join_boxes_and_text(rawtable.cells[i][3].text_boxes)
+                bit_validity[32] = join_boxes_and_text(rawtable.cells[i][4].text_boxes)
+                description = join_boxes_and_text(rawtable.cells[i][5].text_boxes)
+
+                result.append(cls(opcode, instruction, description, bit_validity))
+
+        return result
 
 ##  TextConverter
 ##
@@ -340,7 +493,14 @@ class TextBoxStripper(HTMLConverter):
                     # Advance to the next available rectangle
                     i += 1
             # Append the new group of the group list
-            self.tables.append(Table(new_grp, self.text_boxes))
+            if len(new_grp) > 4:
+                self.tables.append(RawTable(new_grp, self.text_boxes))
+            else:
+                # Too few lines to make a table..
+                pass
+
+        #for i in range(len(self.tables)):
+        #    self.tables[i] = RawTable(self.tables[i])
 
     def write(self, text):
         return
@@ -437,7 +597,10 @@ eps = 5
 title_x = 45.12
 title_y = 714.0
 
-pages = [135] # ADDPD in vol A
+#pages = [135] # ADDPD in vol A
+pages = [133] # ADDPD in vol A
+#pages = [145] # ADDPD in vol A
+#pages = [ i for i in range(120,160) ]
 #pages = [437] # FCOMI in full
 #pages = [1522] # VFMADDSUB132PS/VFMADDSUB13PS/VFMADDSUB231PS in full manual
 #pages = [1853] # VRANGEPS in full manual
@@ -460,18 +623,27 @@ with open(input_filepath, "rb") as fp:
         interpreter.process_page(page)
         device.drop_empty_textboxes()
         device.merge_textboxes()
+        print("Merged textboxes")
+        for text_box in device.text_boxes:
+            print(text_box)
         # Table processing
         device.build_tables()
-        for text_box in device.text_boxes:
-            #print(text_box)
-            if text_box.x > (title_x-eps) and text_box.x < (title_x+eps) and\
-                text_box.y > (title_y-eps) and text_box.y < (title_y+eps):
-                candidate_title_text = text_box.text.decode('windows-1252', 'ignore')
-                if inst_title_re.match(candidate_title_text):
-                    print(candidate_title_text)
-        print("---- Tables")
+        ## For now, we don't care about the title of the page.
+        ## With table contents we have all the information
+        #for text_box in device.text_boxes:
+        #    #print(text_box)
+        #    if text_box.x > (title_x-eps) and text_box.x < (title_x+eps) and\
+        #        text_box.y > (title_y-eps) and text_box.y < (title_y+eps):
+        #        candidate_title_text = text_box.text.decode('windows-1252', 'ignore')
+        #        if inst_title_re.match(candidate_title_text):
+        #            print(candidate_title_text)
+        print("---- Raw Tables")
+        instructions = []
         for table in device.tables:
-            print(table)
-            table.show_table()
+            instructions += Instruction.FromTable(table)
+
+        print("---- Instructions")
+        for inst in instructions:
+            print(inst)
 
     device.close()
