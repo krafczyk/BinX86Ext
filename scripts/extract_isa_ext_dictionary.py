@@ -199,7 +199,7 @@ class Cell(object):
             rbox = self.text_boxes[i+1]
 
             if abs(lbox.y-rbox.y) < Cell.dy:
-                self.text_boxes[i].text += rbox.text
+                self.text_boxes[i].text = b" ".join([self.text_boxes[i].text.strip(),rbox.text.strip()])
                 del self.text_boxes[i+1]
             else:
                 i += 1
@@ -548,7 +548,7 @@ class Instruction(object):
                 bvt = bit_validity_text.split('/')
                 if len(bvt) != 2:
                     raise RuntimeError("Bit validity ({}) should contain one '/' character.".format(bit_validity_text))
-                bit_validity = {64: bvt[0], 32: bvt[1]}
+                bit_validity = {64: bvt[0].strip(), 32: bvt[1].strip()}
                 cpuflags = join_boxes_and_text(rawtable.cells[i][3].text_boxes).split(" ")
                 if cpuflags == ['']:
                     cpuflags = []
