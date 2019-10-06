@@ -169,6 +169,7 @@ class Rectangle(object):
             return True
 
 class Cell(object):
+    dy = 0.05
     def __init__(self, boundaries, all_text_boxes):
         self.text_boxes = []
         self.boundaries = boundaries
@@ -184,7 +185,7 @@ class Cell(object):
         # Drop text boxes containing super scripts (font < size 8)
         i = 0
         while i < len(self.text_boxes):
-            if self.text_boxes[i].height < 8:
+            if self.text_boxes[i].height < 7.95:
                 del self.text_boxes[i]
             else:
                 i += 1
@@ -197,7 +198,7 @@ class Cell(object):
             lbox = self.text_boxes[i]
             rbox = self.text_boxes[i+1]
 
-            if lbox.y == rbox.y:
+            if abs(lbox.y-rbox.y) < Cell.dy:
                 self.text_boxes[i].text += rbox.text
                 del self.text_boxes[i+1]
             else:
@@ -492,8 +493,14 @@ class Instruction(object):
                     opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
                     instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:2])
                 elif num_opcode_cell_text_boxes == 3:
-                    opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
-                    instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:3])
+                    test_1 = rawtable.cells[i][0].text_boxes[1].text.decode('windows-1252', 'ignore')
+                    if test_1[0:2] == "/r":
+                        ## This signifies the first two rows are acutally the opcode.
+                        opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:2])
+                        instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[2:3])
+                    else:
+                        opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
+                        instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:3])
                 elif num_opcode_cell_text_boxes == 4:
                     opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:2])
                     instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[2:4])
@@ -810,6 +817,7 @@ class TextBoxStripper(HTMLConverter):
 parser = argparse.ArgumentParser("Extract a dictionary of instructions and extensions from intel documentation")
 parser.add_argument("-i", "--input", help="The pdf to use", type=str, required=True)
 parser.add_argument("-o", "--output", help="The output file to write to", type=str, required=False)
+parser.add_argument("-v", "--verbose", help="Verbose storage", action='store_true')
 
 args = parser.parse_args()
 
@@ -835,12 +843,10 @@ instructions = []
 #pages = [921] # Page for testing
 #pages = [1715] # Page for testing
 #pages = [1715] # Page for testing
-page_begin = 120
-page_end = 2065
 #page_begin = 120
-#page_end = page_begin+50
-#page_begin = 1637
-#page_end = page_begin+1
+#page_end = 2065
+page_begin = 879
+page_end = page_begin+1
 pages = [ i for i in range(page_begin,page_end) ] # All pages
 #pages = [ i for i in range(2015,2065) ]
 #pages = [437] # FCOMI in full
@@ -887,7 +893,7 @@ with open(input_filepath, "rb") as fp:
             #print("---- Raw Tables")
             for table in device.tables:
                 instructions += Instruction.FromTable(table)
-    
+
             #print("---- Instructions")
             #for inst in instructions:
             #    print(inst)
@@ -903,5 +909,9 @@ with open(input_filepath, "rb") as fp:
             Instruction.write_header(csv_writer)
             for inst in instructions:
                 inst.write_to_csv(csv_writer)
+
+    if args.verbose:
+        for inst in instructions:
+            print(inst)
 
     device.close()
