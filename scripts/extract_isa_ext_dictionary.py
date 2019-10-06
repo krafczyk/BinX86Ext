@@ -856,27 +856,9 @@ title_x = 45.12
 title_y = 714.0
 
 instructions = []
-#pages = [135] # ADDPD in vol A
-#pages = [133] # Page for testing
-#pages = [145] # Page for testing
-#pages = [202] # Page for testing
-#pages = [244] # Page for testing
-#pages = [362] # Page for testing
-#pages = [663] # Page for testing
-#pages = [849] # Page for testing
-#pages = [873] # Page for testing
-#pages = [921] # Page for testing
-#pages = [1715] # Page for testing
-#pages = [1715] # Page for testing
 page_begin = 120
 page_end = 2065
-#page_begin = 1696
-#page_end = page_begin+1
 pages = [ i for i in range(page_begin,page_end) ] # All pages
-#pages = [ i for i in range(2015,2065) ]
-#pages = [437] # FCOMI in full
-#pages = [1522] # VFMADDSUB132PS/VFMADDSUB13PS/VFMADDSUB231PS in full manual
-#pages = [1853] # VRANGEPS in full manual
 total_num_pages = len(pages)
 bar_widgets = [
     progressbar.Bar(),
