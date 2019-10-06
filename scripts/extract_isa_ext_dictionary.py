@@ -490,8 +490,28 @@ class Instruction(object):
                         # Skip the next row
                         skip = True
                 elif num_opcode_cell_text_boxes == 2:
-                    opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
-                    instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:2])
+                    test_1 = rawtable.cells[i][0].text_boxes[0].text.decode('windows-1252', 'ignore')
+                    if ('xmm' in test_1) or ('ymm' in test_1) or ('zmm' in test_1):
+                        # This is a tricky situation where the Opcode was really left out.
+                        instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes)
+                        inst_name = test_1.split(" ")[0]
+                        # Check previous result for same instruction type.
+                        if result[-1].inst == inst_name:
+                            # Grab opcode from prior instruction
+                            opcode = result[-1].opcode
+                            # The only situation we've encountered this is for an EVEX instruction
+                            # Thus, we need to double the number following EVEX from the previous
+                            # instruction and we're done
+                            opcode_list = opcode.split(" ")
+                            prefix_list = opcode_list[0].split('.')
+                            prefix_list[1] = str(int(prefix_list[1])*2)
+                            opcode_list[0] = '.'.join(prefix_list)
+                            opcode = " ".join(opcode_list)
+                        else:
+                            raise RuntimeError("Can't find a similar instruction!")
+                    else:
+                        opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
+                        instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:2])
                 elif num_opcode_cell_text_boxes == 3:
                     test_1 = rawtable.cells[i][0].text_boxes[1].text.decode('windows-1252', 'ignore')
                     if test_1[0:2] == "/r":
@@ -502,8 +522,14 @@ class Instruction(object):
                         opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
                         instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:3])
                 elif num_opcode_cell_text_boxes == 4:
-                    opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:2])
-                    instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[2:4])
+                    test_1 = rawtable.cells[i][0].text_boxes[1].text.decode('windows-1252', 'ignore')
+                    if ('xmm' in test_1) or ('ymm' in test_1) or ('zmm' in test_1):
+                        ## This signifies that the second line here is part of the instruction.
+                        opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:1])
+                        instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[1:4])
+                    else:
+                        opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:2])
+                        instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[2:4])
                 elif num_opcode_cell_text_boxes == 5:
                     opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes[0:2])
                     instruction = join_boxes_and_text(rawtable.cells[i][0].text_boxes[2:5])
@@ -528,8 +554,6 @@ class Instruction(object):
                     cpuflags = []
                 description = join_boxes_and_text(rawtable.cells[i][4].text_boxes)
 
-                result.append(cls(opcode, instruction, description, bit_validity, cpuid=cpuflags))
-
             elif the_type == "B":
                 opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes)
                 instruction = join_boxes_and_text(rawtable.cells[i][1].text_boxes)
@@ -537,8 +561,7 @@ class Instruction(object):
                 bit_validity[64] = join_boxes_and_text(rawtable.cells[i][3].text_boxes)
                 bit_validity[32] = join_boxes_and_text(rawtable.cells[i][4].text_boxes)
                 description = join_boxes_and_text(rawtable.cells[i][5].text_boxes)
-
-                result.append(cls(opcode, instruction, description, bit_validity))
+                cpuflags = []
             elif the_type == "C":
                 opcode_cell = rawtable.cells[i][0]
                 num_opcode_cell_text_boxes = len(opcode_cell.text_boxes)
@@ -563,8 +586,7 @@ class Instruction(object):
                 bit_validity[64] = join_boxes_and_text(rawtable.cells[i][2].text_boxes)
                 bit_validity[32] = join_boxes_and_text(rawtable.cells[i][3].text_boxes)
                 description = join_boxes_and_text(rawtable.cells[i][4].text_boxes)
-
-                result.append(cls(opcode, instruction, description, bit_validity))
+                cpuflags = []
 
             elif the_type == "D":
                 opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes)
@@ -573,8 +595,8 @@ class Instruction(object):
                 bit_validity[64] = join_boxes_and_text(rawtable.cells[i][2].text_boxes)
                 bit_validity[32] = join_boxes_and_text(rawtable.cells[i][3].text_boxes)
                 description = join_boxes_and_text(rawtable.cells[i][4].text_boxes)
+                cpuflags = []
 
-                result.append(cls(opcode, instruction, description, bit_validity))
             elif the_type == "E":
                 opcode = join_boxes_and_text(rawtable.cells[i][0].text_boxes)
                 instruction = join_boxes_and_text(rawtable.cells[i][1].text_boxes)
@@ -589,9 +611,12 @@ class Instruction(object):
                 if cpuflags == ['']:
                     cpuflags = []
                 description = join_boxes_and_text(rawtable.cells[i][5].text_boxes)
-                result.append(cls(opcode, instruction, description, bit_validity, cpuid=cpuflags))
 
 
+            if instruction[0:2] == "ib":
+                opcode = " ".join([opcode,"ib"])
+                instruction = instruction[2:]
+            result.append(cls(opcode, instruction, description, bit_validity, cpuid=cpuflags))
         return result
 
 ##  TextConverter
@@ -843,10 +868,10 @@ instructions = []
 #pages = [921] # Page for testing
 #pages = [1715] # Page for testing
 #pages = [1715] # Page for testing
-#page_begin = 120
-#page_end = 2065
-page_begin = 879
-page_end = page_begin+1
+page_begin = 120
+page_end = 2065
+#page_begin = 1696
+#page_end = page_begin+1
 pages = [ i for i in range(page_begin,page_end) ] # All pages
 #pages = [ i for i in range(2015,2065) ]
 #pages = [437] # FCOMI in full
