@@ -69,9 +69,9 @@ for inst_hash in instruction_definitions_raw:
     if name in unsupported_instructions:
         continue
     if name not in instruction_def_name_dict:
-        instruction_def_name_dict[name] = [row]
+        instruction_def_name_dict[name] = [inst_hash]
     else:
-        instruction_def_name_dict[name].append(row)
+        instruction_def_name_dict[name].append(inst_hash)
 
 # Disassemble input file
 disassembly = disassemble(input_file).decode()
@@ -95,8 +95,17 @@ for line in disassembly.split('\n'):
                     unsupported_inst_encounters[inst_name] = 1
                 else:
                     unsupported_inst_encounters[inst_name] += 1
+                continue
 
-            # Check 
+            # Get byte stream
+            inst_bytes = tab_list[1].strip().split(' ')
+            print(f"instruction bytes: {inst_bytes}")
+
+            # Check instructions with appropriate names
+            inst_hashes = instruction_def_name_dict[inst_name]
+            for inst_hash in inst_hashes:
+                inst_def = instruction_definitions_raw[inst_hash]
+                print(inst_def)
 
 if len(unsupported_inst_encounters) != 0:
     print("WARNING: The following instructions were encountered which are not supported")
