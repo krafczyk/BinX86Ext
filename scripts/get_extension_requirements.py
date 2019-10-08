@@ -40,7 +40,8 @@ if disassemble is None:
     sys.exit(1)
 
 # Load instruction definition data
-instruction_definitions_raw = []
+instruction_definitions_raw = {}
+supported_duplicates = ['JZ', 'LEAVE', 'POP', 'REP']
 with open(definitions_file, 'r') as def_file:
     def_reader = csv.reader(def_file, delimiter=',', quotechar='"')
     begin = True
@@ -48,13 +49,22 @@ with open(definitions_file, 'r') as def_file:
         if begin:
             begin = False
             continue
+        inst_hash = hash(row[1]+row[2])
         row[5] = row[5].split('|')
-        instruction_definitions_raw.append(row)
+        if inst_hash in instruction_definitions_raw:
+            if row[0] not in supported_duplicates:
+                print("ERROR: instruction definitions had a hash collision")
+                print(f"row {row}")
+                print(f"collided with {instruction_definitions_raw[inst_hash]}")
+                sys.exit(1)
+        else:
+            instruction_definitions_raw[inst_hash] = row
 
 # Clean instruction definitions
 instruction_def_name_dict = {}
 unsupported_instructions = ['repz']
-for row in instruction_definitions_raw:
+for inst_hash in instruction_definitions_raw:
+    row = instruction_definitions_raw[inst_hash]
     name = row[0].lower()
     if name in unsupported_instructions:
         continue
@@ -63,37 +73,30 @@ for row in instruction_definitions_raw:
     else:
         instruction_def_name_dict[name].append(row)
 
-inst_def_count = {}
-for name in sorted(list(instruction_def_name_dict.keys())):
-    inst_def_count[name] = len(instruction_def_name_dict[name])
-
 # Disassemble input file
 disassembly = disassemble(input_file).decode()
 
 # Extract instructions and match with definitions
 instruction_heading_matcher = re.compile(r'^ [0-9a-f]*:$')
 
-inst_count_dict = {}
 unsupported_inst_encounters = {}
 
 for line in disassembly.split('\n'):
     tab_list = line.split('\t')
     if len(tab_list) == 3:
         if instruction_heading_matcher.match(tab_list[0]):
+            # We have a line which is an instruction
             inst_name_portion = tab_list[2].strip()
             inst_name = inst_name_portion.split(' ')[0]
+
+            # Check whether this instruction is unsupported
             if inst_name in unsupported_instructions:
                 if inst_name not in unsupported_inst_encounters:
                     unsupported_inst_encounters[inst_name] = 1
                 else:
                     unsupported_inst_encounters[inst_name] += 1
-            if inst_name not in inst_count_dict:
-                inst_count_dict[inst_name] = 1
-            else:
-                inst_count_dict[inst_name] += 1
 
-for key in sorted(list(inst_count_dict.keys())):
-    print(f'{key} -> {inst_count_dict[key]}')
+            # Check 
 
 if len(unsupported_inst_encounters) != 0:
     print("WARNING: The following instructions were encountered which are not supported")
