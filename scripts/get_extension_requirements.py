@@ -79,8 +79,10 @@ disassembly = disassemble(input_file).decode()
 # Extract instructions and match with definitions
 instruction_heading_matcher = re.compile(r'^ [0-9a-f]*:$')
 
+# A list of unsupported instructions which were encountered and how often
 unsupported_inst_encounters = {}
 
+# Primary program loop. Here we are looping through each line of the disassembly output
 for line in disassembly.split('\n'):
     tab_list = line.split('\t')
     if len(tab_list) == 3:
