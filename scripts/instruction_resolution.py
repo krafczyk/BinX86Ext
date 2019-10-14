@@ -10,6 +10,7 @@ import re
 parser = argparse.ArgumentParser("Resolve instruction definitions to byte sequences")
 
 parser.add_argument("-d", "--definitions", help="The instruction definitions file to process", type=str, required=True)
+parser.add_argument("-o", "--output", help="Output file", type=str, required=False)
 
 args = parser.parse_args()
 
@@ -22,20 +23,16 @@ if not os.path.isfile(definitions_file):
 
 # Read in instruction definitions
 definitions = []
+head_row = None
 with open(definitions_file, 'r') as def_file:
     def_reader = csv.reader(def_file, quotechar='"', delimiter=',')
     begin = True
     for row in def_reader:
         if begin:
             begin = False
+            head_row = row
             continue
         definitions.append(row)
-
-unique_opcode_pieces = []
-
-selection_opcode_pieces = []
-
-plus_pieces = lib.counting_dict()
 
 # A series of regular expression matchers to fix known problems. Order here matters.
 matchers = []
@@ -83,7 +80,8 @@ matchers.append((re.compile(r'\+ (rb|rw|rd|io|id|iw|cb|cw|cd)'),
                  r'+\1'))
 
 # Iterate through each instruction
-for inst in definitions:
+for i in range(len(definitions)):
+    inst = definitions[i]
     # Input pre-processing We fix known problems here
     opcode_def_raw = inst[1].strip()
     for (matcher, replacement) in matchers:
@@ -91,39 +89,12 @@ for inst in definitions:
 
     opcode_def = opcode_def_raw.split(' ')
 
-    #if len(opcode_def) >= 3:
-    #    if opcode_def[2] == "/":
-    #        print(inst[0])
-    #        print(inst[1])
-    #        print(opcode_def)
+    inst[1] = ' '.join(opcode_def)
 
-    for def_i in range(len(opcode_def)-1):
-        if opcode_def[def_i] == '+':
-            plus_pieces[opcode_def[def_i+1]] += 1
-
-    for def_i in range(len(opcode_def)):
-        if def_i > len(unique_opcode_pieces)-1:
-            unique_opcode_pieces.append(lib.counting_dict())
-        unique_opcode_pieces[def_i][opcode_def[def_i]] += 1
-
-    #if opcode_def[0][0:4] == "EVEX":
-    #    for def_i in range(len(opcode_def)):
-    #        if def_i > len(selection_opcode_pieces)-1:
-    #            selection_opcode_pieces.append(lib.counting_dict())
-    #        selection_opcode_pieces[def_i][opcode_def[def_i]] += 1
-
-print("Unique pieces")
-for i in range(len(unique_opcode_pieces)):
-    print(f"---- Piece {i} ----")
-    for key in sorted(list(unique_opcode_pieces[i].keys())):
-        print(f"[{key}] -> {unique_opcode_pieces[i][key]}")
-
-print("Selection pieces")
-for i in range(len(selection_opcode_pieces)):
-    print(f"---- Piece {i} ----")
-    for key in sorted(list(selection_opcode_pieces[i].keys())):
-        print(f"[{key}] -> {selection_opcode_pieces[i][key]}")
-
-print("Plus pieces")
-for key in sorted(list(plus_pieces.keys())):
-    print(f"[{key}] -> {plus_pieces[key]}")
+# Write new rows to new destination
+if args.output is not None:
+    with open(args.output, 'w') as outputfile:
+        csv_writer = csv.writer(outputfile, quotechar='"',delimiter=',')
+        csv_writer.writerow(head_row)
+        for row in definitions:
+            csv_writer.writerow(row)
