@@ -78,6 +78,8 @@ matchers.append((re.compile(r' ib$'),
                  r' /ib'))
 matchers.append((re.compile(r'\+ (rb|rw|rd|io|id|iw|cb|cw|cd)'),
                  r'+\1'))
+matchers.append((re.compile(r' \+ '),
+                 r' '))
 
 # Iterate through each instruction
 for i in range(len(definitions)):
