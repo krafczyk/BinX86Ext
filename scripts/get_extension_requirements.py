@@ -632,7 +632,11 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             i += 1
 
     if len(cand_records) == 0:
-        raise RuntimeError(f"No candidates for this instruction! {inst_bytes}")
+        print("Problem instruction binary:")
+        for byte in inst_bytes:
+            by_num = int(byte, 16)
+            print(f"{by_num:08b}")
+        raise RuntimeError(f"No candidates for this instruction! {inst_name} {inst_bytes}")
 
     # Prune list of candidates to the candidate which had the fewest additional prefixes
     fewest_prefixes = None
