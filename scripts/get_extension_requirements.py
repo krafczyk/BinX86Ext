@@ -13,6 +13,11 @@ class InstructionDefinition(object):
     opcode_byte_modifiers = ['+rb', '+rw', '+rd', '+ro']
     code_segment_offset = [('cb', 1), ('cw', 2), ('cd', 4), ('cp', 6), ('co', 8), ('ct', 10)]
     digit_matcher = re.compile('^/[0-7]$')
+    legacy_prefix_groups = [[0xF0, 0xF2, 0xF3],
+                            [0x2E, 0x36, 0x3E, 0x26, 0x64, 0x65, 0x2E, 0x3E],
+                            [0x66],
+                            [0x67]]
+
     def __init__(self, inrow=[]):
         self._name = inrow[def_col_idx['name']]
         self._opcode = inrow[def_col_idx['opcode']]
@@ -292,8 +297,8 @@ class InstructionDefinition(object):
             elif True in [True if op_mod in self.opcode_parts[op_i] else False for op_mod in InstructionDefinition.opcode_byte_modifiers]:
                 for i in range(len(valmasks)):
                     valmask = valmasks[i]
-                    valmask[-1] = (valmask[-1][0] & 0xF1, # Remove bottom 3 bits from value
-                                   valmask[-1][1] & 0xF1) # Remove bottom 3 bits from mask
+                    valmask[-1] = (valmask[-1][0] & 0xF8, # Remove bottom 3 bits from value
+                                   valmask[-1][1] & 0xF8) # Remove bottom 3 bits from mask
                 op_i += 1
             elif True in [True if cs_so in self.opcode_parts[op_i] else False for (cs_so, _) in InstructionDefinition.code_segment_offset]:
                 for (cs_so, cs_size) in InstructionDefinition.code_segment_offset:
@@ -350,11 +355,7 @@ class InstructionDefinition(object):
             res_string += valmask_string
         return res_string
 
-    def check_for_match(self, inst_bytes, file_type='64'):
-        # Check whether this instruction is appropriate for this file type
-        if self.val64 != 'V':
-            return False
-
+    def plain_match_strategy(self, inst_bytes):
         # Check for match to instruction
         match = True
         for valmask in self.valmasks:
@@ -366,6 +367,45 @@ class InstructionDefinition(object):
                     break
             if match:
                 break
+        return match
+
+    def extra_rex_match_strategy(self, inst_bytes):
+        # Check for initial REX byte.
+        val = 0x40
+        mask = 0xF0
+
+        if val == int(inst_bytes[0], 16)&mask:
+            # we have an initial REX prefix
+            match = True
+            for valmask in self.valmasks:
+                for j in range(min(len(valmask),len(inst_bytes)-1)):
+                    (val, mask) = valmask[j]
+                    inst_byte = int(inst_bytes[j+1], 16)
+                    print(f"inst_byte: {inst_byte:02X} mask: {mask:02X} val: {val:02X} inst_byte&mask: {inst_byte&mask:02X}")
+                    if (inst_byte&mask) != val:
+                        match = False
+                        break
+                if match:
+                    break
+            return match
+        else:
+            return False
+
+    def get_match_strategies(self):
+        return [self.plain_match_strategy,
+                self.extra_rex_match_strategy]
+
+    def check_for_match(self, inst_bytes, file_type='64'):
+        # Check whether this instruction is appropriate for this file type
+        if self.val64 != 'V':
+            return False
+
+        match = False
+        for strategy in self.get_match_strategies():
+            if strategy(inst_bytes):
+                match = True
+                break
+
         return match
 
     @property
