@@ -149,7 +149,6 @@ class InstructionDefinition(object):
                     vex_mmmmm_mask = 0x1F
                     if '0F' in vex_parts:
                         vex_mmmmm = int('00001', 2)
-                        three_byte_only = True
                     elif '0F38' in vex_parts:
                         vex_mmmmm = int('00010', 2)
                         three_byte_only = True
@@ -174,7 +173,7 @@ class InstructionDefinition(object):
                         vex_w = 0
                         vex_w_mask = 1
 
-                    if not three_byte_only and vex_mmmmm == 0:
+                    if not three_byte_only:
                         # Can use the 2-byte version
                         valmask_base = valmasks[0].copy()
                         valmasks[0].append((0xC5, 0xFF))
