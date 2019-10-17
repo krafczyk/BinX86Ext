@@ -351,6 +351,11 @@ class InstructionDefinition(object):
         return res_string
 
     def check_for_match(self, inst_bytes, file_type='64'):
+        # Check whether this instruction is appropriate for this file type
+        if self.val64 != 'V':
+            return False
+
+        # Check for match to instruction
         match = True
         for valmask in self.valmasks:
             for j in range(min(len(valmask),len(inst_bytes))):
@@ -478,6 +483,10 @@ for def_hash in definitions_raw:
 # Disassemble input file
 (file_type, instruction_list) = disassemble(input_file)
 
+
+if file_type != '64':
+    raise RuntimeError("binary types other than 64 bit are not supported at this time.")
+
 # A list of unsupported instructions which were encountered and how often
 unsupported_inst_encounters = {}
 
@@ -499,33 +508,30 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
 
     print(f"==== New Instruction ({inst_num}) {inst_name} - {inst_bytes} - {inst_decode} =====")
 
-    if file_type == '64':
-        # Get list of candidate hashes
-        cand_hashes = []
-        for def_hash in def_name_dict[inst_name]:
-            if definitions_raw[def_hash].val64 == 'V':
-                cand_hashes.append(def_hash)
+    # Get list of candidate hashes
+    cand_hashes = []
+    for def_hash in def_name_dict[inst_name]:
+        if definitions_raw[def_hash].val64 == 'V':
+            cand_hashes.append(def_hash)
         
-        # Attempt to match each hash's valmask to the instruction bytes.
-        i = 0
-        while i < len(cand_hashes):
-            # Fetch definition
-            definition = definitions_raw[cand_hashes[i]]
-            print(f"Considering {definition}")
+    # Attempt to match each hash's valmask to the instruction bytes.
+    i = 0
+    while i < len(cand_hashes):
+        # Fetch definition
+        definition = definitions_raw[cand_hashes[i]]
+        print(f"Considering {definition}")
 
-            if not definition.check_for_match(inst_bytes):
-                del cand_hashes[i]
-            else:
-                i += 1
+        if not definition.check_for_match(inst_bytes):
+            del cand_hashes[i]
+        else:
+            i += 1
 
-        if len(cand_hashes) == 0:
-            raise RuntimeError("No candidates for this instruction!")
+    if len(cand_hashes) == 0:
+        raise RuntimeError("No candidates for this instruction!")
 
-        print("Candidate definitions:")
-        for cand_hash in cand_hashes:
-            print(f"{definitions_raw[cand_hash]}")
-    else:
-        raise RuntimeError("binary types other than 64 bit are not supported at this time.")
+    print("Candidate definitions:")
+    for cand_hash in cand_hashes:
+        print(f"{definitions_raw[cand_hash]}")
 
 if len(unsupported_inst_encounters) != 0:
     print("WARNING: The following instructions were encountered which are not supported")
