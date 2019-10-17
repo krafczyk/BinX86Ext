@@ -378,10 +378,10 @@ class InstructionDefinition(object):
             # we have an initial REX prefix
             match = True
             for valmask in self.valmasks:
+                match = True
                 for j in range(min(len(valmask),len(inst_bytes)-1)):
                     (val, mask) = valmask[j]
                     inst_byte = int(inst_bytes[j+1], 16)
-                    print(f"inst_byte: {inst_byte:02X} mask: {mask:02X} val: {val:02X} inst_byte&mask: {inst_byte&mask:02X}")
                     if (inst_byte&mask) != val:
                         match = False
                         break
@@ -391,9 +391,64 @@ class InstructionDefinition(object):
         else:
             return False
 
+    def extra_legacy_prefix_match_strategy(self, inst_bytes):
+        if self.instruction.split(' ')[0] == 'NP':
+            check_NP = True
+        else:
+            check_NP = False
+
+        if self.instruction.split(' ')[0] == 'NFx':
+            check_NFx = True
+        else:
+            check_NFx = False
+
+        prefixes_exhausted = False
+        num_prefixes = 0
+        while not prefixes_exhausted:
+            prefixes_exhausted = True
+            prefix_search_terminate = False
+            for legacy_prefix_group in InstructionDefinition.legacy_prefix_groups:
+                for prefix in legacy_prefix_group:
+                    if check_NP:
+                        if prefix in [0x66, 0xF2, 0xF3]:
+                            # These prefixes are not allowed for this instruction.
+                            continue
+                    if check_NFx:
+                        if prefix in [0xF2, 0xF3]:
+                            # These prefixes are not allowed for this instruction.
+                            continue
+    
+                    if int(inst_bytes[num_prefixes],16) == prefix:
+                        # This prefix is here!
+                        prefixes_exhausted = False
+                        prefix_search_terminate = True
+                        num_prefixes += 1
+
+                        match = True
+                        for valmask in self.valmasks:
+                            match = True
+                            for j in range(min(len(valmask),len(inst_bytes)-1)):
+                                (val, mask) = valmask[j]
+                                inst_byte = int(inst_bytes[j+num_prefixes], 16)
+                                if (inst_byte&mask) != val:
+                                    match = False
+                                    break
+                            if match:
+                                break
+                        if match:
+                            return match
+                    if prefix_search_terminate:
+                        break
+                if prefix_search_terminate:
+                    break
+        # We didn't find a match..
+        return False
+
+
     def get_match_strategies(self):
         return [self.plain_match_strategy,
-                self.extra_rex_match_strategy]
+                self.extra_rex_match_strategy,
+                self.extra_legacy_prefix_match_strategy]
 
     def check_for_match(self, inst_bytes, file_type='64'):
         # Check whether this instruction is appropriate for this file type
