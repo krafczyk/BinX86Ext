@@ -177,18 +177,18 @@ class InstructionDefinition(object):
                     if not three_byte_only and vex_mmmmm == 0:
                         # Can use the 2-byte version
                         valmask_base = valmasks[0].copy()
-                        valmasks[0].append((0xC4, 0xFF))
+                        valmasks[0].append((0xC5, 0xFF))
                         valmasks[0].append(((vex_l << 2)+vex_pp,
                                             (vex_l_mask << 2)+vex_pp_mask))
 
                         valmasks.append(valmask_base)
-                        valmasks[1].append((0xC5, 0xFF))
+                        valmasks[1].append((0xC4, 0xFF))
                         valmasks[1].append((vex_mmmmm, vex_mmmmm_mask))
                         valmasks[1].append(((vex_w << 7)+(vex_l << 2)+vex_pp,
                                             (vex_w_mask << 7)+(vex_l_mask << 2)+vex_pp_mask))
                     else:
                         # Must use the 3-byte version only
-                        valmasks[0].append((0xC5, 0xFF))
+                        valmasks[0].append((0xC4, 0xFF))
                         valmasks[0].append((vex_mmmmm, vex_mmmmm_mask))
                         valmasks[0].append(((vex_w << 7)+(vex_l << 2)+vex_pp,
                                             (vex_w_mask << 7)+(vex_l_mask << 2)+vex_pp_mask))
