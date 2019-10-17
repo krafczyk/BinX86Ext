@@ -604,46 +604,47 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
     print(f"==== New Instruction ({inst_num}) {inst_name} - {inst_bytes} - {inst_decode} =====")
 
     # Get list of candidate hashes
-    cand_hashes = []
+    cand_records = []
     for def_hash in def_name_dict[inst_name]:
         if definitions_raw[def_hash].val64 == 'V':
-            cand_hashes.append((def_hash,0))
+            cand_records.append((def_hash,0))
         
     # Attempt to match each hash's valmask to the instruction bytes.
     i = 0
-    while i < len(cand_hashes):
+    while i < len(cand_records):
         # Fetch definition
-        definition = definitions_raw[cand_hashes[i][0]]
-        print(f"Considering {definition}")
+        definition = definitions_raw[cand_records[i][0]]
 
         def_match = definition.check_for_match(inst_bytes)
         if not def_match[0]:
-            del cand_hashes[i]
+            del cand_records[i]
         else:
-            cand_hashes[i] = (cand_hashes[i][0], def_match[1])
+            cand_records[i] = (cand_records[i][0], def_match[1])
             i += 1
 
-    if len(cand_hashes) == 0:
+    if len(cand_records) == 0:
         raise RuntimeError("No candidates for this instruction!")
 
     # Prune list of candidates to the candidate which had the fewest additional prefixes
     fewest_prefixes = None
-    for cand_hash in cand_hashes:
+    for cand_record in cand_records:
         if fewest_prefixes is None:
-            fewest_prefixes = cand_hash[1]
+            fewest_prefixes = cand_record[1]
         else:
-            if cand_hash[1] < fewest_prefixes:
-                fewest_prefixes = cand_hash[1]
+            if cand_record[1] < fewest_prefixes:
+                fewest_prefixes = cand_record[1]
     i = 0
-    while i < len(cand_hashes):
-        if cand_hashes[i][1] > fewest_prefixes:
-            del cand_hashes[i]
+    while i < len(cand_records):
+        if cand_records[i][1] > fewest_prefixes:
+            del cand_records[i]
         else:
             i += 1
 
+    # Check that the remaining candidates have identical extension requirements
+
     print("Candidate definitions:")
-    for cand_hash in cand_hashes:
-        print(f"{definitions_raw[cand_hash[0]]} with {cand_hash[1]} extra prefixes")
+    for cand_record in cand_records:
+        print(f"{definitions_raw[cand_record[0]]} with {cand_record[1]} extra prefixes")
 
 if len(unsupported_inst_encounters) != 0:
     print("WARNING: The following instructions were encountered which are not supported")
