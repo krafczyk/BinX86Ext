@@ -57,6 +57,10 @@ class InstructionDefinition(object):
         return self._32val
 
     @property
+    def cpuid(self):
+        return self._cpuid
+
+    @property
     def valmasks(self):
         return self._valmasks
 
@@ -468,7 +472,7 @@ class InstructionDefinition(object):
         return self._opcode_parts
 
     def __repr__(self):
-        return f"{self._name} {self.opcode_parts} \"{self._instruction}\" {self.valmask_string()}"
+        return f"{self._name} {self.opcode_parts} \"{self._instruction}\" {self.cpuid} {self.valmask_string()}"
 
 parser = argparse.ArgumentParser("Tool to get the instruction extensions required for a given program.")
 
@@ -601,8 +605,6 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             unsupported_inst_encounters[inst_name] += 1
         continue
 
-    print(f"==== New Instruction ({inst_num}) {inst_name} - {inst_bytes} - {inst_decode} =====")
-
     # Get list of candidate hashes
     cand_records = []
     for def_hash in def_name_dict[inst_name]:
@@ -623,7 +625,7 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             i += 1
 
     if len(cand_records) == 0:
-        raise RuntimeError("No candidates for this instruction!")
+        raise RuntimeError(f"No candidates for this instruction! {inst_bytes}")
 
     # Prune list of candidates to the candidate which had the fewest additional prefixes
     fewest_prefixes = None
@@ -641,10 +643,34 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             i += 1
 
     # Check that the remaining candidates have identical extension requirements
+    uniform_requirements = True
+    for i in range(len(cand_records)-1):
+        def_i = definitions_raw[cand_records[i][0]]
+        for j in range(i,len(cand_records)):
+            def_j = definitions_raw[cand_records[j][0]]
+            if def_i.cpuid != def_j.cpuid:
+                uniform_requirements = False
+                break
+        if not uniform_requirements:
+            break
 
-    print("Candidate definitions:")
-    for cand_record in cand_records:
-        print(f"{definitions_raw[cand_record[0]]} with {cand_record[1]} extra prefixes")
+    if not uniform_requirements:
+        print("Candidates")
+        for cand_record in cand_records:
+            print(f"{definitions_raw[cand_record[0]]}")
+        raise RuntimeError("Error, not all candidates have the same cpuid requirements!")
+
+    cpuid_reqs = definitions_raw[cand_records[0][0]].cpuid
+    if len(cpuid_reqs) != 0:
+        if cpuid_reqs not in extension_requirements:
+            extension_requirements.append(cpuid_reqs)
+
+if len(extension_requirements) == 0:
+    print(f"No special extensions are required to run {input_file}")
+else:
+    print("Extension Requirements:")
+    for cpuid_reqs in extension_requirements:
+        print(cpuid_reqs)
 
 if len(unsupported_inst_encounters) != 0:
     print("WARNING: The following instructions were encountered which are not supported")
