@@ -367,7 +367,7 @@ class InstructionDefinition(object):
                     break
             if match:
                 break
-        return match
+        return (match, 0)
 
     def extra_rex_match_strategy(self, inst_bytes):
         # Check for initial REX byte.
@@ -387,9 +387,9 @@ class InstructionDefinition(object):
                         break
                 if match:
                     break
-            return match
+            return (match, 1)
         else:
-            return False
+            return (False, 1)
 
     def extra_legacy_prefix_match_strategy(self, inst_bytes):
         if self.instruction.split(' ')[0] == 'NP':
@@ -436,14 +436,13 @@ class InstructionDefinition(object):
                             if match:
                                 break
                         if match:
-                            return match
+                            return (match, num_prefixes)
                     if prefix_search_terminate:
                         break
                 if prefix_search_terminate:
                     break
         # We didn't find a match..
-        return False
-
+        return (False, num_prefixes)
 
     def get_match_strategies(self):
         return [self.plain_match_strategy,
@@ -456,12 +455,13 @@ class InstructionDefinition(object):
             return False
 
         match = False
+        strat_result = None
         for strategy in self.get_match_strategies():
-            if strategy(inst_bytes):
-                match = True
-                break
+            strat_result = strategy(inst_bytes)
+            if strat_result[0]:
+                return strat_result
 
-        return match
+        return strat_result
 
     @property
     def opcode_parts(self):
@@ -607,26 +607,43 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
     cand_hashes = []
     for def_hash in def_name_dict[inst_name]:
         if definitions_raw[def_hash].val64 == 'V':
-            cand_hashes.append(def_hash)
+            cand_hashes.append((def_hash,0))
         
     # Attempt to match each hash's valmask to the instruction bytes.
     i = 0
     while i < len(cand_hashes):
         # Fetch definition
-        definition = definitions_raw[cand_hashes[i]]
+        definition = definitions_raw[cand_hashes[i][0]]
         print(f"Considering {definition}")
 
-        if not definition.check_for_match(inst_bytes):
+        def_match = definition.check_for_match(inst_bytes)
+        if not def_match[0]:
             del cand_hashes[i]
         else:
+            cand_hashes[i] = (cand_hashes[i][0], def_match[1])
             i += 1
 
     if len(cand_hashes) == 0:
         raise RuntimeError("No candidates for this instruction!")
 
+    # Prune list of candidates to the candidate which had the fewest additional prefixes
+    fewest_prefixes = None
+    for cand_hash in cand_hashes:
+        if fewest_prefixes is None:
+            fewest_prefixes = cand_hash[1]
+        else:
+            if cand_hash[1] < fewest_prefixes:
+                fewest_prefixes = cand_hash[1]
+    i = 0
+    while i < len(cand_hashes):
+        if cand_hashes[i][1] > fewest_prefixes:
+            del cand_hashes[i]
+        else:
+            i += 1
+
     print("Candidate definitions:")
     for cand_hash in cand_hashes:
-        print(f"{definitions_raw[cand_hash]}")
+        print(f"{definitions_raw[cand_hash[0]]} with {cand_hash[1]} extra prefixes")
 
 if len(unsupported_inst_encounters) != 0:
     print("WARNING: The following instructions were encountered which are not supported")
