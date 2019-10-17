@@ -478,6 +478,7 @@ parser = argparse.ArgumentParser("Tool to get the instruction extensions require
 
 parser.add_argument("-i", "--input", help="The binary file to inspect", type=str, required=True)
 parser.add_argument("-d", "--definitions", help="The file containing instruction definitions. Should be a .csv file", default="instructions_fixed.csv")
+parser.add_argument("-v", "--verbose", help="Verbose output", action='store_true')
 
 args = parser.parse_args()
 
@@ -492,6 +493,7 @@ if not os.path.isfile(args.definitions):
 
 input_file = args.input
 definitions_file = args.definitions
+verbose = args.verbose
 
 # Disassembler
 # We need to find an appropriate dissassembler
@@ -549,6 +551,10 @@ def_col_idx = {'name':0, 'opcode':1, 'instruction':2,
                   '64-val':3, '32-val':4, 'cpuid':5, 'val-mask':6}
 with open(definitions_file, 'r') as def_file:
     def_reader = csv.reader(def_file, delimiter=',', quotechar='"')
+
+    if verbose:
+        print("==== Registering Instructions: ====")
+
     begin = True
     for row in def_reader:
         if begin:
@@ -564,6 +570,8 @@ with open(definitions_file, 'r') as def_file:
                 print(f"collided with {definitions_raw[def_hash]}")
                 sys.exit(1)
         else:
+            if verbose:
+                print(f"{definition}")
             definitions_raw[definition.def_hash] = definition
 
 # Group instruction definitions
