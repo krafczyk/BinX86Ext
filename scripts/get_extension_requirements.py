@@ -575,7 +575,7 @@ with open(definitions_file, 'r') as def_file:
 
 # Group instruction definitions
 def_name_dict = {}
-unsupported_instructions = ['repz']
+unsupported_instructions = ['repz', 'data16']
 for def_hash in definitions_raw:
     definition = definitions_raw[def_hash]
     name = definition.name.lower()
@@ -614,9 +614,13 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
 
     # Get list of candidate hashes
     cand_records = []
-    for def_hash in def_name_dict[inst_name]:
-        if definitions_raw[def_hash].val64 == 'V':
-            cand_records.append((def_hash,0))
+    try:
+        for def_hash in def_name_dict[inst_name]:
+            if definitions_raw[def_hash].val64 == 'V':
+                cand_records.append((def_hash,0))
+    except KeyError as e:
+        print(f"Couldn't find instruction {inst_name}! {inst_bytes} {inst_decode}")
+        raise e
         
     # Attempt to match each hash's valmask to the instruction bytes.
     i = 0
