@@ -442,10 +442,45 @@ class InstructionDefinition(object):
         # We didn't find a match..
         return (False, num_prefixes)
 
+    def insert_rex_strategy(self, inst_bytes):
+        for valmask in self.valmasks:
+            # Test whether the initial byte in the definition is a legacy prefix.
+            is_legacy_prefix = False
+            v_i = 0
+            i_i = 0
+            for legacy_prefix_group in InstructionDefinition.legacy_prefix_groups:
+                for prefix in legacy_prefix_group:
+                    if valmask[v_i][0] == prefix:
+                        is_legacy_prefix = True
+                        break
+                if is_legacy_prefix:
+                    break
+            if not is_legacy_prefix:
+                return (False, 0)
+
+            # Check for the matching prefix in the instruction bytes
+            if valmask[v_i][0] != int(inst_bytes[i_i],16):
+                return (False, 0)
+
+            v_i += 1
+            i_i += 1
+
+            # Test for an inserted rex byte.
+            if int(inst_bytes[i_i],16)&0xF0 != 0x40:
+                return False
+            i_i += 1
+
+            # Check for match on the rest.
+            match = InstructionDefinition.valmask_check_match(valmask[v_i:], inst_bytes[i_i:])
+            if match:
+                break
+        return (match, 1)
+
     def get_match_strategies(self):
         return [self.plain_match_strategy,
                 self.extra_rex_match_strategy,
-                self.extra_legacy_prefix_match_strategy]
+                self.extra_legacy_prefix_match_strategy,
+                self.insert_rex_strategy]
 
     def check_for_match(self, inst_bytes, file_type='64'):
         # Check whether this instruction is appropriate for this file type
