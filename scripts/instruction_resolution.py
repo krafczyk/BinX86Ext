@@ -93,8 +93,9 @@ for i in range(len(definitions)):
 
     inst[1] = ' '.join(opcode_def)
 
-# Add hidden instructions not in the pdf!!!
+# Add hidden instructions not in the pdf, or are not currently picked up by the extraction algorithm!!!
 definitions.append(['FFREEP','DF C0 +i', 'FFREEP ST(i)', 'V', 'V',''])
+definitions.append(['MFENCE','NP 0F AE F0', 'MFENCE', 'V', 'V',''])
 
 # Write new rows to new destination
 if args.output is not None:
