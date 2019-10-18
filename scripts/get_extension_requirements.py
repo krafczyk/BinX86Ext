@@ -522,7 +522,7 @@ class InstructionDefinition(object):
         return self._opcode_parts
 
     def __repr__(self):
-        return f"{self._name} {self.opcode_parts} \"{self._instruction}\" {self.cpuid} {self.valmask_string()}"
+        return f"{self._name} {self.opcode_parts} \"{self._instruction}\" 64:{self.val64} 32:{self.val32} {self.cpuid} {self.valmask_string()}"
 
 parser = argparse.ArgumentParser("Tool to get the instruction extensions required for a given program.")
 
