@@ -554,6 +554,7 @@ parser.add_argument("-d", "--definitions", help="The file containing instruction
 parser.add_argument("-v", "--verbose", help="Verbose output", action='store_true')
 parser.add_argument("-p", "--progress", help="Show progress", action='store_true')
 parser.add_argument("-c", "--careful", help="Scrutinize all instructions instead of just non-trivial requirement instructions", action='store_true')
+parser.add_argument("--objdump-location", help="Location of object dump command to use", type=str)
 
 args = parser.parse_args()
 
@@ -577,7 +578,11 @@ careful = args.careful
 disassemble = None
 
 if disassemble is None:
-    objdump_location = subprocess.check_output(['which', 'objdump']).decode().strip()
+    if args.objdump_location is None:
+        objdump_location = subprocess.check_output(['which', 'objdump']).decode().strip()
+    else:
+        objdump_location = args.objdump_location
+
     def objdump_disassemble(binary_path):
         global objdump_location
         disassembly_lines = subprocess.check_output([objdump_location,
