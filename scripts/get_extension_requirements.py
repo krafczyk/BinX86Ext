@@ -467,7 +467,7 @@ class InstructionDefinition(object):
 
             # Test for an inserted rex byte.
             if int(inst_bytes[i_i],16)&0xF0 != 0x40:
-                return False
+                return (False, 0)
             i_i += 1
 
             # Check for match on the rest.
