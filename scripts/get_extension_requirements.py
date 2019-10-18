@@ -39,7 +39,6 @@ class InstructionDefinition(object):
                         'vcmpeq_usss', 'vcmpeq_uqss', 'vcmpngt_uqss', 'vcmpfalse_osss',
                         'vcmpneq_osss', 'vcmpge_oqss', 'vcmpgt_oqss', 'vcmptrue_usss'], 'vcmpss')]
 
-
     def __init__(self, inrow=[]):
         self._name = inrow[def_col_idx['name']]
         self._opcode = inrow[def_col_idx['opcode']]
