@@ -764,14 +764,23 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
                 def_b_mem = True if inst_mem_matcher.search(def_b.instruction) else False
                 if def_a_mem != def_b_mem:
                     # Check that the disassembler tells us an operand is a memory pointer.
+                    uniform_req_failure = False
                     if 'PTR' in inst_decode:
-                        uniform_req_failure = False
+                        # We want the memory version
                         if def_a_mem:
                             # Eliminate b
                             del cand_records[1]
                         else:
                             # Eliminate a
                             del cand_records[0]
+                    else:
+                        # We want the xmm-ymm version
+                        if def_a_mem:
+                            # Eliminate a
+                            del cand_records[0]
+                        else:
+                            # Eliminate b
+                            del cand_records[1]
 
         if uniform_req_failure:
             print(f"Candidates for instruction ({inst_num}) {inst_name}, {inst_bytes}, {inst_decode}")
