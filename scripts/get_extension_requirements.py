@@ -663,7 +663,7 @@ if progress:
     bar = progressbar.ProgressBar(max_value=len(instruction_list), widgets=bar_widgets, redirect_stdout=True)
     bar.start()
 
-inst_mem_matcher = re.compile('m(64|128)')
+inst_mem_matcher = re.compile('m(32|64|128)')
 
 inst_num = 0
 for (inst_name, inst_bytes, inst_decode) in instruction_list:
