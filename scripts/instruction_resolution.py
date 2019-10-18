@@ -93,6 +93,9 @@ for i in range(len(definitions)):
 
     inst[1] = ' '.join(opcode_def)
 
+# Add hidden instructions not in the pdf!!!
+definitions.append(['FFREEP','DF C0 +i', 'FFREEP ST(i)', 'V', 'V',''])
+
 # Write new rows to new destination
 if args.output is not None:
     with open(args.output, 'w') as outputfile:
