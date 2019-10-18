@@ -356,7 +356,7 @@ class InstructionDefinition(object):
                 # We need to remove 3 bits from the previous opcode.
                 for i in range(len(valmasks)):
                     valmask = valmasks[i]
-                    valmask[-1] = (valmask[-1][0] & 0xF1, valmask[-1][1] & 0xF1)
+                    valmask[-1] = (valmask[-1][0] & 0xF8, valmask[-1][1] & 0xF8)
                 op_i += 1
             else:
                 raise RuntimeError(f"Unrecognized opcode part {op_i} {self.opcode_parts[op_i]}")
