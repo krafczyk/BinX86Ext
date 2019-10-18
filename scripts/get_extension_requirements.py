@@ -37,7 +37,31 @@ class InstructionDefinition(object):
                         'vcmpeq_osss', 'vcmplt_oqss', 'vcmple_oqss', 'vcmpunord_sss',
                         'vcmpneq_usss', 'vcmpnlt_uqss', 'vcmpnle_uqss', 'vcmpord_sss',
                         'vcmpeq_usss', 'vcmpeq_uqss', 'vcmpngt_uqss', 'vcmpfalse_osss',
-                        'vcmpneq_osss', 'vcmpge_oqss', 'vcmpgt_oqss', 'vcmptrue_usss'], 'vcmpss')]
+                        'vcmpneq_osss', 'vcmpge_oqss', 'vcmpgt_oqss', 'vcmptrue_usss'], 'vcmpss'),
+                      (['cmpeqpd', 'cmpltpd', 'cmplepd', 'cmpunordpd',
+                        'cmpneqpd', 'cmpnltpd', 'cmpnlepd', 'cmpordpd'], 'cmppd'),
+                      (['vcmpeqpd', 'vcmpltpd', 'vcmplepd', 'vcmpunordpd',
+                        'vcmpneqpd', 'vcmpnltpd', 'vcmpnlepd', 'vcmpordpd',
+                        'vcmpeq_uqpd', 'vcmpngepd', 'vcmpngtpd', 'vcmpfalsepd',
+                        'vcmpneq_oqpd', 'vcmpgepd', 'vcmpgtpd', 'vcmptruepd',
+                        'vcmpeq_ospd', 'vcmplt_oqpd', 'vcmple_oqpd', 'vcmpunord_spd',
+                        'vcmpneq_uspd', 'vcmpnlt_uqpd', 'vcmpnle_uqps', 'vcmpord_spd',
+                        'vcmpeq_uspd', 'vcmpnge_uqpd', 'vcmpngt_uqpd', 'vcmpfalse_ospd',
+                        'vcmpneq_ospd', 'vcmpge_oqpd', 'vcmpgt_oqpd', 'vcmptrue_uspd'], 'vcmppd'),
+                      (['cmpeqsd', 'cmpltsd', 'cmplesd', 'cmpunordsd',
+                        'cmpneqsd', 'cmpnltsd', 'cmpnlesd', 'cmpordsd'], 'cmpsd'),
+                      (['vcmpeqsd', 'vcmpltsd', 'vcmplesd', 'vcmpunordsd',
+                        'vcmpneqsd', 'vcmpnltsd', 'vcmpnlesd', 'vcmpordsd',
+                        'vcmpeq_uqsd', 'vcmpngesd', 'vcmpngtsd', 'vcmpfalsesd',
+                        'vcmpneq_oqsd', 'vcmpgesd', 'vcmpgtsd', 'vcmptruesd',
+                        'vcmpeq_ossd', 'vcmplt_oqsd', 'vcmple_oqsd', 'vcmpunord_ssd',
+                        'vcmpneq_ussd', 'vcmpnlt_uqsd', 'vcmpnle_uqsd', 'vcmpord_ssd',
+                        'vcmpeq_ussd', 'vcmpnge_uqsd', 'vcmpngt_uqsd', 'vcmpfalse_ossd',
+                        'vcmpneq_ossd', 'vcmpge_oqsd', 'vcmpgt_oqsd', 'vcmptrue_ussd'], 'vcmpsd'),
+                      (['vpcmpeq', 'vpcmplt', 'vpcmple', 'vpcmpneq',
+                        'vppcmpnlt', 'vpcmpnle'], 'vpcmp'),
+                      (['pclmullqlqdq', 'pclmulhqlqdq', 'pclmullqhqdq', 'pclmulhqhqdq'], 'pclmulqdq'),
+                      (['vpclmullqlqdq', 'vpclmulhqlqdq', 'vpclmullqhqdq', 'vpclmulhqhqdq'], 'vpclmulqdq')]
 
     def __init__(self, inrow=[]):
         self._name = inrow[def_col_idx['name']]
