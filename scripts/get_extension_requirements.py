@@ -642,6 +642,8 @@ if progress:
     bar = progressbar.ProgressBar(max_value=len(instruction_list), widgets=bar_widgets, redirect_stdout=True)
     bar.start()
 
+inst_mem_matcher = re.compile('m(64|128)')
+
 inst_num = 0
 for (inst_name, inst_bytes, inst_decode) in instruction_list:
     inst_num += 1
@@ -713,10 +715,38 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             break
 
     if not uniform_requirements:
-        print(f"Candidates for instruction ({inst_num}) {inst_name}, {inst_bytes}")
-        for cand_record in cand_records:
-            print(f"{definitions_raw[cand_record[0]]}")
-        raise RuntimeError("Error, not all candidates have the same cpuid requirements!")
+        uniform_req_failure = True
+        # Strategies to resolve Final ambiguities
+        if len(cand_records) == 2:
+            # Can do something for these cases.
+            # Check for differing instruction statements.
+            def_a = definitions_raw[cand_records[0][0]]
+            def_b = definitions_raw[cand_records[1][0]]
+            if def_a.instruction != def_b.instruction:
+                res_a = inst_mem_matcher.search(def_a.instruction)
+                res_b = inst_mem_matcher.search(def_b.instruction)
+                # Check that one has a memory specifier and the other doesn't
+                def_a_mem = True if inst_mem_matcher.search(def_a.instruction) else False
+                def_b_mem = True if inst_mem_matcher.search(def_b.instruction) else False
+                if def_a_mem != def_b_mem:
+                    # Check that the disassembler tells us an operand is a memory pointer.
+                    if 'PTR' in inst_decode:
+                        uniform_req_failure = False
+                        if def_a_mem:
+                            # Eliminate b
+                            del cand_records[1]
+                        else:
+                            # Eliminate a
+                            del cand_records[0]
+
+        if uniform_req_failure:
+            print(f"Candidates for instruction ({inst_num}) {inst_name}, {inst_bytes}, {inst_decode}")
+            for byte in inst_bytes:
+                by_num = int(byte, 16)
+                print(f"{by_num:08b}")
+            for cand_record in cand_records:
+                print(f"{definitions_raw[cand_record[0]]}")
+            raise RuntimeError("Error, not all candidates have the same cpuid requirements!")
 
     cpuid_reqs = definitions_raw[cand_records[0][0]].cpuid
     if len(cpuid_reqs) != 0:
