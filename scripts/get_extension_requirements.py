@@ -713,7 +713,7 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             break
 
     if not uniform_requirements:
-        print("Candidates")
+        print(f"Candidates for instruction ({inst_num}) {inst_name}, {inst_bytes}")
         for cand_record in cand_records:
             print(f"{definitions_raw[cand_record[0]]}")
         raise RuntimeError("Error, not all candidates have the same cpuid requirements!")
