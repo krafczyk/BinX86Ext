@@ -651,7 +651,7 @@ with open(definitions_file, 'r') as def_file:
 
 # Group instruction definitions
 def_name_dict = {}
-unsupported_instructions = ['repz', 'data16']
+unsupported_instructions = ['repz', 'data16', 'movabs', 'endbr64']
 for def_hash in definitions_raw:
     definition = definitions_raw[def_hash]
     name = definition.name.lower()
