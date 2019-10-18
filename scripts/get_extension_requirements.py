@@ -18,6 +18,27 @@ class InstructionDefinition(object):
                             [0x2E, 0x36, 0x3E, 0x26, 0x64, 0x65, 0x2E, 0x3E],
                             [0x66],
                             [0x67]]
+    pseudo_op_maps = [(['cmpeqps', 'cmpltps', 'cmpleps', 'cmpunordps',
+                        'cmpneqps', 'cmpnltps', 'cmpnleps', 'cmpordps'],'cmpps'),
+                      (['vcmpeqps', 'vcmpltps', 'vcmpleps', 'vcmpunordps',
+                        'vcmpneqps', 'vcmpnltps', 'vcmpnleps', 'vcmpordps',
+                        'vcmpeq_uqps', 'vcmpngeps', 'vcmpngtps', 'vcmpfalseps',
+                        'vcmpneq_oqps', 'vcmpgeps', 'vcmpgtps', 'vcmptrueps',
+                        'vcmpeq_osps', 'vcmplt_oqps', 'vcmple_oqps', 'vcmpunord_sps',
+                        'vcmpneq_usps', 'vcmpnlt_uqps', 'vcmpnle_uqps', 'vcmpord_sps'
+                        'vcmpeq_usps', 'vcmpnge_uqps', 'vcmpngt_uqps', 'vcmpfalse_osps',
+                        'vcmpneq_osps', 'vcmpge_oqps', 'vcmpgt_oqps', 'vcmptrue_usps'], 'vcmpps'),
+                      (['cmpeqss', 'cmpltss', 'cmpless', 'cmpunordss',
+                        'cmpneqss', 'cmpnltss', 'cmpnless', 'cmpordss'], 'cmpss'),
+                      (['vcmpeqss', 'vcmpltss', 'vcmpless', 'vcmpunordss',
+                        'vcmpneqss', 'vcmpnltss', 'vcmpnless', 'vcmpordss',
+                        'vcmpeq_uqss', 'vcmpnegess', 'vcmpngtss', 'vcmpfalsess',
+                        'vcmpneq_oqss', 'vcmpgess', 'vcmpgtss', 'vcmptruess',
+                        'vcmpeq_osss', 'vcmplt_oqss', 'vcmple_oqss', 'vcmpunord_sss',
+                        'vcmpneq_usss', 'vcmpnlt_uqss', 'vcmpnle_uqss', 'vcmpord_sss',
+                        'vcmpeq_usss', 'vcmpeq_uqss', 'vcmpngt_uqss', 'vcmpfalse_osss',
+                        'vcmpneq_osss', 'vcmpge_oqss', 'vcmpgt_oqss', 'vcmptrue_usss'], 'vcmpss')]
+
 
     def __init__(self, inrow=[]):
         self._name = inrow[def_col_idx['name']]
@@ -659,13 +680,27 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
 
     # Get list of candidate hashes
     cand_records = []
-    try:
-        for def_hash in def_name_dict[inst_name]:
-            if definitions_raw[def_hash].val64 == 'V':
-                cand_records.append((def_hash,0))
-    except KeyError as e:
-        print(f"Couldn't find instruction {inst_name}({inst_num})! {inst_bytes} {inst_decode}")
-        raise e
+    while True:
+        try:
+            for def_hash in def_name_dict[inst_name]:
+                if definitions_raw[def_hash].val64 == 'V':
+                    cand_records.append((def_hash,0))
+            break
+        except KeyError as e:
+            tryagain = False
+            for (pseudo_op_map,target) in InstructionDefinition.pseudo_op_maps:
+                if inst_name in pseudo_op_map:
+                    inst_name = target
+                    tryagain = True
+                    break
+            if not tryagain:
+                if inst_name in ['cs', 'ds']:
+                    # Chance this is a jump with a segment override.
+                    inst_name = inst_decode.split(' ')[1]
+                    tryagain = True
+            if not tryagain:
+                print(f"Couldn't find instruction {inst_name}({inst_num})! {inst_bytes} {inst_decode}")
+                raise e
         
     # Attempt to match each hash's valmask to the instruction bytes.
     i = 0
