@@ -4,6 +4,7 @@ import sys
 import subprocess
 import re
 import csv
+import progressbar
 
 class InstructionDefinition(object):
     def_col_idx = {'name':0, 'opcode':1, 'instruction':2,
@@ -362,6 +363,7 @@ class InstructionDefinition(object):
         # Check for match to instruction
         match = True
         for valmask in self.valmasks:
+            match = True
             for j in range(min(len(valmask),len(inst_bytes))):
                 (val, mask) = valmask[j]
                 inst_byte = int(inst_bytes[j], 16)
@@ -478,6 +480,7 @@ parser = argparse.ArgumentParser("Tool to get the instruction extensions require
 parser.add_argument("-i", "--input", help="The binary file to inspect", type=str, required=True)
 parser.add_argument("-d", "--definitions", help="The file containing instruction definitions. Should be a .csv file", default="instructions_fixed.csv")
 parser.add_argument("-v", "--verbose", help="Verbose output", action='store_true')
+parser.add_argument("-p", "--progress", help="Show progress", action='store_true')
 
 args = parser.parse_args()
 
@@ -493,6 +496,7 @@ if not os.path.isfile(args.definitions):
 input_file = args.input
 definitions_file = args.definitions
 verbose = args.verbose
+progress = args.progress
 
 # Disassembler
 # We need to find an appropriate dissassembler
@@ -601,9 +605,20 @@ byte_matcher = re.compile(r'[0-9A-F][0-9A-F]')
 extension_requirements = []
 
 # Primary program loop. Here we are looping through each line of the disassembly output
+
+if progress:
+    bar_widgets = [
+        progressbar.Bar(),
+        progressbar.Counter(format='%(value)i/%(max_value)i')
+    ]
+    bar = progressbar.ProgressBar(max_value=len(instruction_list), widgets=bar_widgets, redirect_stdout=True)
+    bar.start()
+
 inst_num = 0
 for (inst_name, inst_bytes, inst_decode) in instruction_list:
     inst_num += 1
+    if progress:
+        bar.update(inst_num)
     # Check whether this instruction is unsupported
     if inst_name in unsupported_instructions:
         if inst_name not in unsupported_inst_encounters:
@@ -679,6 +694,9 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
     if len(cpuid_reqs) != 0:
         if cpuid_reqs not in extension_requirements:
             extension_requirements.append(cpuid_reqs)
+
+if progress:
+    bar.finish()
 
 if len(extension_requirements) == 0:
     print(f"No special extensions are required to run {input_file}")
