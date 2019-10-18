@@ -359,17 +359,22 @@ class InstructionDefinition(object):
             res_string += valmask_string
         return res_string
 
+    @staticmethod
+    def valmask_check_match(valmask, inst_bytes):
+        match = True
+        for j in range(min(len(valmask), len(inst_bytes))):
+            (val, mask) = valmask[j]
+            inst_byte = int(inst_bytes[j], 16)
+            if (inst_byte&mask) != val:
+                match = False
+                break
+        return match
+
     def plain_match_strategy(self, inst_bytes):
         # Check for match to instruction
         match = True
         for valmask in self.valmasks:
-            match = True
-            for j in range(min(len(valmask),len(inst_bytes))):
-                (val, mask) = valmask[j]
-                inst_byte = int(inst_bytes[j], 16)
-                if (inst_byte&mask) != val:
-                    match = False
-                    break
+            match = InstructionDefinition.valmask_check_match(valmask, inst_bytes)
             if match:
                 break
         return (match, 0)
@@ -383,13 +388,7 @@ class InstructionDefinition(object):
             # we have an initial REX prefix
             match = True
             for valmask in self.valmasks:
-                match = True
-                for j in range(min(len(valmask),len(inst_bytes)-1)):
-                    (val, mask) = valmask[j]
-                    inst_byte = int(inst_bytes[j+1], 16)
-                    if (inst_byte&mask) != val:
-                        match = False
-                        break
+                match = InstructionDefinition.valmask_check_match(valmask, inst_bytes[1:])
                 if match:
                     break
             return (match, 1)
@@ -431,13 +430,7 @@ class InstructionDefinition(object):
 
                         match = True
                         for valmask in self.valmasks:
-                            match = True
-                            for j in range(min(len(valmask),len(inst_bytes)-1)):
-                                (val, mask) = valmask[j]
-                                inst_byte = int(inst_bytes[j+num_prefixes], 16)
-                                if (inst_byte&mask) != val:
-                                    match = False
-                                    break
+                            match = InstructionDefinition.valmask_check_match(valmask, inst_bytes[num_prefixes:])
                             if match:
                                 break
                         if match:
