@@ -1,8 +1,15 @@
-# no jedi -> parso
 chardet==3.0.4
+Cython==0.29.13
+distro==1.4.0
 #jedi==0.15.1
+numpy==1.17.2
+pandas==0.25.1
 #parso==0.5.1
-pdfminer.six==20181108
+-e git+git@github.com:krafczyk/pdfminer.six@4e37b2996e23cfc4a7d5549a4f2a92b2251dcc8c#egg=pdfminer.six
+progressbar2==3.47.0
 pycryptodome==3.9.0
+python-dateutil==2.8.0
+python-utils==2.3.0
+pytz==2019.2
 six==1.12.0
 sortedcontainers==2.1.0
