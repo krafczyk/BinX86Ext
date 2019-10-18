@@ -627,7 +627,7 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             if definitions_raw[def_hash].val64 == 'V':
                 cand_records.append((def_hash,0))
     except KeyError as e:
-        print(f"Couldn't find instruction {inst_name}! {inst_bytes} {inst_decode}")
+        print(f"Couldn't find instruction {inst_name}({inst_num})! {inst_bytes} {inst_decode}")
         raise e
         
     # Attempt to match each hash's valmask to the instruction bytes.
@@ -648,7 +648,7 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
         for byte in inst_bytes:
             by_num = int(byte, 16)
             print(f"{by_num:08b}")
-        raise RuntimeError(f"No candidates for this instruction! {inst_name} {inst_bytes}")
+        raise RuntimeError(f"No candidates for this instruction ({inst_num})! {inst_name} {inst_bytes}")
 
     # Prune list of candidates to the candidate which had the fewest additional prefixes
     fewest_prefixes = None
