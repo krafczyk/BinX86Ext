@@ -553,6 +553,7 @@ parser.add_argument("-i", "--input", help="The binary file to inspect", type=str
 parser.add_argument("-d", "--definitions", help="The file containing instruction definitions. Should be a .csv file", default="instructions_fixed.csv")
 parser.add_argument("-v", "--verbose", help="Verbose output", action='store_true')
 parser.add_argument("-p", "--progress", help="Show progress", action='store_true')
+parser.add_argument("-c", "--careful", help="Scrutinize all instructions instead of just non-trivial requirement instructions", action='store_true')
 
 args = parser.parse_args()
 
@@ -569,6 +570,7 @@ input_file = args.input
 definitions_file = args.definitions
 verbose = args.verbose
 progress = args.progress
+careful = args.careful
 
 # Disassembler
 # We need to find an appropriate dissassembler
@@ -725,6 +727,18 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
                 print(f"Couldn't find instruction {inst_name}({inst_num})! {inst_bytes} {inst_decode}")
                 raise e
         
+    # Check whether any candidate has a non-trivial extension requirement
+    if not args.careful:
+        is_nontrivial = False
+        for cand_record in cand_records:
+            definition = definitions_raw[cand_record[0]]
+            if definition.cpuid != []:
+                is_nontrivial = True
+                break
+        if not is_nontrivial:
+            # Skip trivial instruction
+            continue
+
     # Attempt to match each hash's valmask to the instruction bytes.
     i = 0
     while i < len(cand_records):
