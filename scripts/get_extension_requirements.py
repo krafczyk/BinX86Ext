@@ -854,14 +854,28 @@ if len(extension_requirements) == 0:
 else:
     if full_stats:
         print(f"Full Instruction Statistics:")
-        name_hash_map = {}
+        def hash_cpuid(cpuid):
+            hash_answer = 0
+            for component in cpuid:
+                hash_answer += hash(component)
+            return hash_answer
+        cpuid_name_hash_map = {}
+        cpuid_hash_map = {}
         for def_hash in sorted(instruction_count.keys()):
             definition = definitions_raw[def_hash]
-            name_hash_map[definition.name] = def_hash
+            cpuid_hash = hash_cpuid(definition.cpuid)
+            if cpuid_hash not in cpuid_name_hash_map:
+                cpuid_name_hash_map[cpuid_hash] = {}
+            cpuid_name_hash_map[cpuid_hash][definition.name] = def_hash
+            if cpuid_hash not in cpuid_hash_map:
+                cpuid_hash_map[cpuid_hash] = definition.cpuid
             
-        for name in sorted(list(name_hash_map.keys())):
-            definition = definitions_raw[name_hash_map[name]]
-            print(f"{definition.name} -> {instruction_count[name_hash_map[name]]}")
+        for cpuid_hash in sorted(list(cpuid_hash_map.keys())):
+            cpuid = cpuid_hash_map[cpuid_hash]
+            print(f"-- {cpuid} --")
+            for name in sorted(list(cpuid_name_hash_map[cpuid_hash].keys())):
+                definition = definitions_raw[cpuid_name_hash_map[cpuid_hash][name]]
+                print(f"{definition.name} -> {instruction_count[cpuid_name_hash_map[cpuid_hash][name]]}")
     print("Extension Requirements:")
     for cpuid_reqs in extension_requirements:
         print(cpuid_reqs)
