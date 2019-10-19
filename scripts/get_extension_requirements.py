@@ -62,6 +62,7 @@ class InstructionDefinition(object):
                         'vppcmpnlt', 'vpcmpnle'], 'vpcmp'),
                       (['pclmullqlqdq', 'pclmulhqlqdq', 'pclmullqhqdq', 'pclmulhqhqdq'], 'pclmulqdq'),
                       (['vpclmullqlqdq', 'vpclmulhqlqdq', 'vpclmullqhqdq', 'vpclmulhqhqdq'], 'vpclmulqdq')]
+    pseudo_op_maps += [ ([ ('vpcmp'+var+Type) for var in [ 'eq', 'lt', 'le', 'false', 'neq', 'nlt', 'nle', 'true' ]],('vpcmp'+Type)) for Type in [ 'b', 'd', 'q', 'w', 'ub', 'ud', 'uq', 'uw' ]]
 
     def __init__(self, inrow=[]):
         self._name = inrow[def_col_idx['name']]
