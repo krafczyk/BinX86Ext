@@ -5,6 +5,7 @@ import subprocess
 import re
 import csv
 import progressbar
+import library as lib
 
 class InstructionDefinition(object):
     def_col_idx = {'name':0, 'opcode':1, 'instruction':2,
@@ -556,6 +557,7 @@ parser.add_argument("-v", "--verbose", help="Verbose output", action='store_true
 parser.add_argument("-p", "--progress", help="Show progress", action='store_true')
 parser.add_argument("-c", "--careful", help="Scrutinize all instructions instead of just non-trivial requirement instructions", action='store_true')
 parser.add_argument("--objdump-location", help="Location of object dump command to use", type=str)
+parser.add_argument("--full-stats", help="Record and report full instruction stats", action='store_true')
 
 args = parser.parse_args()
 
@@ -573,6 +575,7 @@ definitions_file = args.definitions
 verbose = args.verbose
 progress = args.progress
 careful = args.careful
+full_stats = args.full_stats
 
 # Disassembler
 # We need to find an appropriate dissassembler
@@ -683,6 +686,7 @@ unsupported_inst_encounters = {}
 byte_matcher = re.compile(r'[0-9A-F][0-9A-F]')
 
 extension_requirements = []
+instruction_count = lib.counting_dict()
 
 # Primary program loop. Here we are looping through each line of the disassembly output
 
@@ -836,6 +840,8 @@ for (inst_name, inst_bytes, inst_decode) in instruction_list:
             raise RuntimeError("Error, not all candidates have the same cpuid requirements!")
 
     cpuid_reqs = definitions_raw[cand_records[0][0]].cpuid
+    if full_stats:
+    	instruction_count[cand_records[0][0]] += 1
     if len(cpuid_reqs) != 0:
         if cpuid_reqs not in extension_requirements:
             extension_requirements.append(cpuid_reqs)
@@ -846,6 +852,16 @@ if progress:
 if len(extension_requirements) == 0:
     print(f"No special extensions are required to run {input_file}")
 else:
+    if full_stats:
+        print(f"Full Instruction Statistics:")
+        name_hash_map = {}
+        for def_hash in sorted(instruction_count.keys()):
+            definition = definitions_raw[def_hash]
+            name_hash_map[definition.name] = def_hash
+            
+        for name in sorted(list(name_hash_map.keys())):
+            definition = definitions_raw[name_hash_map[name]]
+            print(f"{definition.name} -> {instruction_count[name_hash_map[name]]}")
     print("Extension Requirements:")
     for cpuid_reqs in extension_requirements:
         print(cpuid_reqs)
