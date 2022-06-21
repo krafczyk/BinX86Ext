@@ -2,7 +2,7 @@ chardet==3.0.4
 Cython==0.29.13
 distro==1.4.0
 #jedi==0.15.1
-numpy==1.17.2
+numpy==1.22.0
 pandas==0.25.1
 #parso==0.5.1
 -e git+git@github.com:krafczyk/pdfminer.six@4e37b2996e23cfc4a7d5549a4f2a92b2251dcc8c#egg=pdfminer.six
