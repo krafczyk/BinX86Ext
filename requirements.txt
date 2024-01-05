@@ -7,7 +7,7 @@ pandas==0.25.1
 #parso==0.5.1
 -e git+git@github.com:krafczyk/pdfminer.six@4e37b2996e23cfc4a7d5549a4f2a92b2251dcc8c#egg=pdfminer.six
 progressbar2==3.47.0
-pycryptodome==3.9.0
+pycryptodome==3.19.1
 python-dateutil==2.8.0
 python-utils==2.3.0
 pytz==2019.2
